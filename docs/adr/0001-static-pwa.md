@@ -1,7 +1,7 @@
 # ADR 0001 — Static PWA architecture
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — amended by ADR-0019: web PWA remains primary; Capacitor adds an Android distribution channel
 
 ## Context
 Calorie/macro tracker for personal use. Must work offline after first load. No backend business logic required for MVP; future sync is explicitly deferred. Deploy target is a personal nginx server serving static files.

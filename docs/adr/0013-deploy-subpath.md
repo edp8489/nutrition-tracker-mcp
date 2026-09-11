@@ -1,7 +1,7 @@
 # ADR 0013 — Deploy path: `/nutrition-tracker/` subpath on personal nginx
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — unchanged for the web build; the Android build uses Vite `base: '/'` and hash routing (ADR-0019)
 
 ## Context
 App deployed on a personal nginx server at a subpath, not a dedicated subdomain. Data chunks served from the same origin under a `data/` path.

@@ -3,13 +3,13 @@
 **Status:** Ready for implementation
 **Date:** 2026-08-24
 **Owner:** Eric
-**Deploy target:** Personal nginx server, `/nutrition-tracker/` subpath
+**Deploy targets:** Web — personal nginx server, `/nutrition-tracker/` subpath; Android — sideloaded Capacitor APK (ADR-0019)
 
 ---
 
 ## 1. Overview
 
-A web-based calorie and macro tracker with minimal UI. Uses the OpenNutrition dataset (v2025.1) as the food/nutrition source. Built as a static PWA — fully offline-capable after first load. Single-user, single-device for MVP; sync and identity explicitly deferred.
+A web-based calorie and macro tracker with minimal UI. Uses the OpenNutrition dataset (v2025.1) as the food/nutrition source. Built as a static PWA — fully offline-capable after first load. Single-user, single-device for MVP; sync and identity explicitly deferred. Distributed as a web PWA plus an Android app via Capacitor (ADR-0019); a desktop app (Wails) is deferred.
 
 The app helps the owner (primary user) create custom recipes, log foods consumed during the day, and visualize macronutrient intake in tabular and graph form.
 
@@ -36,6 +36,8 @@ The app helps the owner (primary user) create custom recipes, log foods consumed
 - Arbitrary date-range reports
 - Multi-user / auth
 - Push notifications
+- Desktop app (Wails) — deferred until after the Android app ships
+- Play Store listing (sideloaded APK, possible F-Droid later)
 
 ---
 
@@ -102,6 +104,7 @@ The app helps the owner (primary user) create custom recipes, log foods consumed
 - Installable via Web App Manifest + icons.
 - No push notifications.
 - `start_url` and `scope` = `/nutrition-tracker/`.
+- Android (Capacitor): assets bundled in the app package; service worker web-only; dataset chunks fetched from nginx on demand and cached in IndexedDB (ADR-0019).
 
 ### 5.6 Attribution
 - Persistent attribution footer on Recipes, Log, Reports views: "Data: [OpenNutrition](https://www.opennutrition.app)" + "(c) Open Food Facts contributors" link.
@@ -116,13 +119,14 @@ The app helps the owner (primary user) create custom recipes, log foods consumed
 | Layer        | Choice                                              | ADR      |
 |--------------|-----------------------------------------------------|----------|
 | Frontend     | Vue 3 (Composition API) + Vite + TypeScript         | ADR-0002 |
-| UI framework | beerCSS (npm)                                       | ADR-0002 |
+| UI framework | Naive UI (npm)                                      | ADR-0018 |
 | State        | Pinia                                               | ADR-0002 |
 | Routing      | Vue Router (`/recipes`, `/log`, `/reports`, `/about`) | ADR-0002 |
 | Charts       | Chart.js + vue-chartjs                              | ADR-0007 |
 | Persistence  | IndexedDB via Dexie.js                              | ADR-0003 |
 | Dataset      | OpenNutrition v2025.1                               | ADR-0004 |
 | Deploy       | Static `dist/` on personal nginx, subpath `/nutrition-tracker/` | ADR-0013 |
+| Mobile packaging | Capacitor (Android APK, sideloaded)             | ADR-0019 |
 | Tests        | Vitest                                              | —        |
 | Lint         | ESLint + Prettier                                   | —        |
 
@@ -303,6 +307,8 @@ At log time, copy the computed macros into `snapshotMacros`. Editing or deleting
 | 0015   | Stored food schema (projected columns)             |
 | 0016   | Category taxonomy from `type` field                |
 | 0017   | Attribution on every data-displaying view          |
+| 0018   | UI framework: Naive UI (replaces BeerCSS)          |
+| 0019   | Capacitor for Android; desktop deferred (Wails)    |
 
 ---
 
@@ -337,6 +343,7 @@ At log time, copy the computed macros into `snapshotMacros`. Editing or deleting
 - **Vite base**: `/nutrition-tracker/`.
 - **Router base**: `/nutrition-tracker/`.
 - **SW registration**: `/nutrition-tracker/sw.js`.
+- **Android build**: Vite build with `base: '/'` + hash router → `npx cap sync android` → APK via Android Studio/Gradle. Sideload only (ADR-0019).
 
 ---
 
@@ -346,3 +353,5 @@ At log time, copy the computed macros into `snapshotMacros`. Editing or deleting
 - `labels` as secondary filter axis (trivial if needed).
 - Legal review of ODbL terms before any public release.
 - Future sync architecture (deferred — requires identity migration).
+- Desktop packaging: deferred until Android ships; Wails (Go) preferred; would bundle the full dataset chunk set (ADR-0019).
+- F-Droid distribution: requires an app-code license decision + reproducible builds.

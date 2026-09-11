@@ -1,7 +1,7 @@
 # ADR 0004 — OpenNutrition dataset delivery: hybrid (build subset + chunked backend fetch)
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — platform note via ADR-0019: web + Android keep hybrid delivery; the future desktop app (Wails) would bundle the full chunk set
 
 ## Context
 OpenNutrition dataset is a ~111MB zip containing a single `opennutrition_foods.tsv`. Shipping the full dataset in the app bundle is impractical. User needs full offline access after first load, and a usable core set immediately on first paint.

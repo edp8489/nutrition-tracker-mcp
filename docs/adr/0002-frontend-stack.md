@@ -1,7 +1,7 @@
 # ADR 0002 — Frontend stack: Vue 3 + Vite + TypeScript + beerCSS + Pinia + Vue Router
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — partially superseded by ADR-0018 (UI library: Naive UI replaces BeerCSS); all other decisions unchanged
 
 ## Context
 Minimal UI, personal project. Need a reactive SPA with three top-level views (Recipes, Log, Reports). beerCSS chosen for Material-style components.

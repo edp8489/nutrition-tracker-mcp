@@ -12,8 +12,13 @@
 | Category    | A coarse classification filter on foods (e.g., fruit, vegetable, branded, restaurant). Source fields TBD in Round 2. |
 | Favorite    | A user-flagged food for quick access in search. Stored as a flag/shortlist.                         |
 | Recent      | A food or recipe recently logged or searched, surfaced as a shortcut.                               |
-| Dataset     | The OpenNutrition foods dataset (TSV, ~111MB uncompressed), delivered hybrid (build subset + chunked backend). |
+| Dataset     | The OpenNutrition foods dataset (~111MB zip, 282MB uncompressed TSV), delivered hybrid (build subset + chunked backend). |
 | Subset      | The slimmed build-time set of common/generic foods bundled in `dist/` for first-paint usability.     |
 | Chunk       | A static file on the nginx backend holding a slice of the parsed dataset, fetched lazily and cached in IndexedDB. |
 | Day         | A local calendar day (no timezone gymnastics). Used for report aggregation.                          |
 | Hour        | Loose timestamp precision: date + hour-of-day (0–23). Minutes/seconds not captured.                 |
+| Naive UI    | Vue 3 component library replacing BeerCSS (ADR-0018). Light theme default; dark toggle in preferences. |
+| Capacitor   | Native runtime wrapping the web build as an Android app (ADR-0019). Web PWA stays the primary channel. |
+| Data Island | An independent per-install data store (IndexedDB). No sync — each install accumulates its own data (ADR-0009). |
+| Wails       | Go-based desktop framework. Preferred future desktop shell; decision deferred until after Android (ADR-0019). |
+| F-Droid     | FOSS Android app repository. Possible future distribution channel pending app-code licensing.        |

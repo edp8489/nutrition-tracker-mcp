@@ -1,7 +1,7 @@
 # ADR 0007 — Chart.js + vue-chartjs for macro graphs
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — beerCSS-theming consequence superseded by ADR-0018 (Chart.js follows the active Naive UI theme)
 
 ## Context
 MVP needs a stacked-bar week view of macros (protein/carbs/fat) per day. beerCSS ships no charts. User excludes Bokeh and Plotly; otherwise no preference.
