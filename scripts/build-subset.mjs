@@ -202,7 +202,7 @@ async function main() {
   // Selected subset (filtered by type) — skipped entirely when --subset none.
   if (subsetFilter !== 'none') {
     await fsPromises.writeFile(
-      join(OUT_DIR, 'subset.jsonl'),
+      join(OUT_DIR, `subset_${subsetFilter}.jsonl`),
       subsetLines.join('\n') + '\n',
       'utf8',
     )
