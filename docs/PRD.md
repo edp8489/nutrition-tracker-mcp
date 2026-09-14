@@ -397,8 +397,8 @@ Chat-based Q&A flows (task types, §5.3) happen in the LLM chat interface, not t
 ## 14. Open items (none blocking the MCP server)
 
 - **Phase-0 spikes** (before implementation):
-  1. `@modelcontextprotocol/sdk` on Bun + `bun:sqlite` FTS5 + OpenWebUI streamable-HTTP connection (ADR-0020).
-  2. Android WebView SQLite mechanism (`@capacitor-community/sqlite` vs SQLite WASM/OPFS) + FTS5 availability (ADR-0022).
+  1. `@modelcontextprotocol/sdk` on Bun + `bun:sqlite` FTS5 + OpenWebUI streamable-HTTP connection (ADR-0020) — **verified 2026-09-14** (`bun run server/smoke.ts stdio|http`): SDK 1.30 runs on Bun via the web-standard transport; stateless mode requires a fresh server+transport per request; "grilled chicken breast" ranks the cooked everyday entry top (tool-layer everyday boost). Remaining: live OpenWebUI connection (owner validation).
+  2. Android WebView SQLite mechanism (`@capacitor-community/sqlite` vs SQLite WASM/OPFS) + FTS5 availability (ADR-0022) — open.
 - `build-subset.mjs` rework: full-column retention, `servingCommon`, measured-zero fix (ADR-0023); new `build-sqlite.mjs` (ADR-0020).
 - Measured tier map curation (ADR-0023) — which fields are "reliably measured".
 - Embeddings phase 2 (ADR-0025): nomic-embed-text-v1.5 or Snowflake arctic-embed, local inference, sqlite-vec.
