@@ -1,7 +1,7 @@
 # ADR 0019 — Capacitor for Android packaging; desktop deferred (Wails preferred)
 
 Date: 2026-09-10
-Status: Accepted
+Status: Accepted — amended by ADR-0022: Android consumes the MCP tool library in-process with on-device SQLite (subset seed + optional chunk import); amended by ADR-0021: Wails desktop preference dropped — desktop is covered by the personal web app
 
 ## Context
 Pivot to native distribution. Capacitor wraps the existing Vue web build in a native shell. Desktop targets via `@capacitor-community/electron` were rejected (community-maintained, patchy release cadence); Tauri was rejected (no Rust experience). A Go-based desktop shell (Wails) is preferred but deferred until the Android app exists.

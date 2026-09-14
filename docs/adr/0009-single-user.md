@@ -1,7 +1,7 @@
 # ADR 0009 — Single-user, single-device for MVP (no identity, no sync)
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — amended by ADR-0021: single-user stands; per-device data islands are intentional (no sync by design); recipe import/export (file-based, v2) is the only bridge
 
 ## Context
 Primary user is the owner. Sync across devices, E2E encryption, and a minimal backend for sync are all explicitly deferred. Adding `userId`/`deviceId` placeholders now would be speculative.

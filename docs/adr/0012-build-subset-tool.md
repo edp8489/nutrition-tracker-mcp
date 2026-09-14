@@ -1,7 +1,7 @@
 # ADR 0012 — Build-time subset: generic foods + frequency list
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — amended by ADR-0023: the projection retains all source columns + `servingCommon` and no longer fabricates zero defaults; amended by ADR-0020: the tool suite gains a SQLite/FTS5 emitter (`scripts/build-sqlite.mjs`) for the MCP server
 
 ## Context
 App must be usable on first paint before any backend chunk fetch. Need a slimmed set bundled in `dist/`. Two candidate selection methods (generic foods filter, frequency list) — owner will evaluate both via a dev tool and decide.

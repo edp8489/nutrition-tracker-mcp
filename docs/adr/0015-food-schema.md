@@ -1,7 +1,7 @@
 # ADR 0015 — Stored food schema (projected columns)
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — amended by ADR-0023: all 13 source columns retained (drop-list retired), `servingCommon` added, measured-0 vs unmeasured semantics introduced
 
 ## Context
 The OpenNutrition TSV has 13 columns; `nutrition_100g` alone contains ~80 sub-fields. Storing every column verbatim wastes space on fields MVP doesn't use (source, package_size, ingredient_analysis). However, micronutrient display is a likely future feature, and re-fetching rows later is costly.

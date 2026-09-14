@@ -1,7 +1,7 @@
 # ADR 0006 — Metric units only (g for solids, ml for liquids)
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — amended by ADR-0024: storage remains metric-only; input additionally accepts imperial and household units, converted at the tool boundary via js-quantities and serving anchors
 
 ## Context
 Unit conversion adds complexity. Personal use; metric is sufficient.

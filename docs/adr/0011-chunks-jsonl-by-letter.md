@@ -1,7 +1,7 @@
 # ADR 0011 — Dataset chunks: JSON Lines by first letter
 
 Date: 2026-08-24
-Status: Accepted
+Status: Accepted — amended by ADR-0021/0022: chunks serve the external web variant and Android's optional full-dataset download (imported into on-device SQLite); the MCP server reads SQLite (ADR-0020)
 
 ## Context
 Full parsed dataset (~111MB) is split into chunks for lazy fetch + IndexedDB caching (see ADR-0004). Need a format and partitioning scheme that supports targeted fetch by query prefix and is cheap to parse in-browser.
