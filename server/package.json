@@ -1,0 +1,17 @@
+{
+  "name": "@nutrition-tracker/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@nutrition-tracker/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2"
+  }
+}

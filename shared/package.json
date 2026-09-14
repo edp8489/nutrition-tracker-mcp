@@ -1,0 +1,16 @@
+{
+  "name": "@nutrition-tracker/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "js-quantities": "^1.8.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/js-quantities": "^1.6.6"
+  }
+}
