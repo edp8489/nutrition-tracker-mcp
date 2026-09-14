@@ -2,19 +2,24 @@
 /**
  * build-subset.mjs
  *
- * Reads the OpenNutrition source TSV and emits:
- *   dist/data/subset.jsonl           — selected subset of foods (default: "everyday")
- *   dist/data/full-database.jsonl    — direct TSV→JSON conversion (ALL rows, ALL columns)
- *   dist/data/chunks/{prefix}.jsonl  — full dataset chunked by first letter
- *   dist/data/manifest.json          — chunk index
+ * Reads the OpenNutrition source TSV and emits (into --out-dir, default the
+ * TSV's directory):
+ *   subset_{type}.jsonl           — selected subset of foods (--subset everyday|…|none)
+ *   full-database.jsonl           — direct TSV→JSON conversion (ALL rows, ALL columns)
+ *   chunks/{prefix}.jsonl         — full dataset chunked by first letter
+ *   manifest.json                 — chunk index
+ *
+ * Projected rows retain all 13 source columns (ADR-0023); the projection
+ * itself lives in project-food.mjs, shared with build-sqlite.mjs.
  *
  * Usage:
- *   node scripts/build-subset.mjs [path/to/opennutrition_foods.tsv]
- *        [--subset everyday|grocery|prepared|restaurant]
+ *   bun scripts/build-subset.mjs [path/to/opennutrition_foods.tsv]
+ *        [--out-dir /path/to/dir]
+ *        [--subset everyday|grocery|prepared|restaurant|none]
  *
- * Defaults to ./opennutrition_foods.tsv in CWD, and subset "everyday".
+ * Defaults to ./opennutrition_foods.tsv in CWD, and subset "none".
  *
- * Per ADR-0011, ADR-0012, ADR-0015.
+ * Per ADR-0011, ADR-0012, ADR-0023.
  */
 
 import { createReadStream } from 'node:fs'
@@ -28,6 +33,7 @@ import {
 import { dirname, join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
+import { projectRow, TSV_COLUMN_COUNT } from './project-food.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
@@ -35,7 +41,8 @@ const TSV_PATH = process.argv[2]
   ? resolve(process.argv[2])
   : resolve(ROOT, 'opennutrition_foods.tsv')
 
-const OUT_DIR = resolve(ROOT, 'dist', 'data')
+//const OUT_DIR = resolve(ROOT, 'dist', 'data')
+const OUT_DIR = parseOutDir(process.argv) || dirname(TSV_PATH)
 const CHUNK_DIR = resolve(OUT_DIR, 'chunks')
 
 // Supported subset values for the --subset CLI flag.
@@ -61,6 +68,26 @@ function parseSubset(argv) {
   return null
 }
 
+/**
+ * Parse --out-dir from argv. Supports both "--out-dir /path" and
+ * "--out-dir=/path". Returns null when not provided.
+ */
+function parseOutDir(argv) {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === '--out-dir') {
+      const value = argv[i + 1]
+      // Reject a missing value or a value that looks like another flag.
+      if (value && !value.startsWith('-')) return resolve(value)
+      return null
+    }
+    if (arg.startsWith('--out-dir=')) {
+      return resolve(arg.slice('--out-dir='.length))
+    }
+  }
+  return null
+}
+
 let subsetFilter = 'none'
 const subsetArg = parseSubset(process.argv)
 if (subsetArg !== null) {
@@ -74,7 +101,7 @@ if (subsetArg !== null) {
 
 if (!existsSync(TSV_PATH)) {
   console.error(`Source TSV not found: ${TSV_PATH}`)
-  console.error('Pass the path as argument: node scripts/build-subset.mjs <path>')
+  console.error('Pass the path as argument: bun scripts/build-subset.mjs <path>')
   process.exit(1)
 }
 
@@ -90,51 +117,6 @@ function bucketFor(name) {
   if (/[a-z]/.test(first)) return first
   if (/[0-9]/.test(first)) return '0-9'
   return '_'
-}
-
-function projectRow(cols) {
-  // cols: id, name, alternate_names, description, type, source, serving,
-  //       nutrition_100g, ean_13, labels, package_size, ingredients, ingredient_analysis
-  const id = cols[0]
-  const name = cols[1]
-  let altNames = []
-  try {
-    altNames = JSON.parse(cols[2] || '[]')
-  } catch {
-    altNames = []
-  }
-  const type = cols[4] || 'everyday'
-  let servingMetric = { unit: 'g', quantity: 100 }
-  try {
-    const serving = JSON.parse(cols[6] || '{}')
-    if (serving?.metric) servingMetric = serving.metric
-  } catch {
-    // keep default
-  }
-  let nutrition100g = { calories: 0, protein: 0, total_fat: 0, carbohydrates: 0 }
-  try {
-    nutrition100g = JSON.parse(cols[7] || '{}')
-  } catch {
-    // keep default
-  }
-  const ean13 = cols[8] || undefined
-  let labels = []
-  try {
-    labels = JSON.parse(cols[9] || '[]')
-  } catch {
-    labels = []
-  }
-
-  return {
-    id,
-    name,
-    altNames,
-    type,
-    servingMetric,
-    nutrition100g,
-    ...(ean13 ? { ean13 } : {}),
-    ...(labels.length ? { labels } : {}),
-  }
 }
 
 /**
@@ -180,7 +162,7 @@ async function main() {
       continue
     }
     const cols = line.split('\t')
-    if (cols.length < 13) continue
+    if (cols.length < TSV_COLUMN_COUNT) continue
 
     const row = projectRow(cols)
 
@@ -225,11 +207,7 @@ async function main() {
     chunks: Array.from(chunkFileNames.entries()).map(([prefix, fileName]) => ({
       chunkFile: fileName,
       firstChars:
-        prefix === '0-9'
-          ? '0,1,2,3,4,5,6,7,8,9'
-          : prefix === '_'
-            ? '_'
-            : prefix,
+        prefix === '0-9' ? '0,1,2,3,4,5,6,7,8,9' : prefix === '_' ? '_' : prefix,
       foodCount: chunkSizes.get(prefix).count,
       sizeBytes: chunkSizes.get(prefix).sizeBytes,
     })),
