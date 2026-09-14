@@ -1,7 +1,12 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
+import { Capacitor } from '@capacitor/core'
+
+const history = Capacitor.isNativePlatform()
+  ? createWebHashHistory()
+  : createWebHistory('/nutrition-tracker/')
 
 const router = createRouter({
-  history: createWebHistory('/nutrition-tracker/'),
+  history,
   routes: [
     {
       path: '/',

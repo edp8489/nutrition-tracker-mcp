@@ -85,18 +85,18 @@ const results = computed(() => foods.searchResults)
     </div>
 
     <n-card
-        v-for="food in results"
-        :key="food.id"
+      v-for="food in results"
+      :key="food.id"
       size="small"
       style="cursor: pointer; margin-top: 8px"
-        @click="select(food)"
-      >
-        <div class="row">
-          <div class="col">
-            <strong>{{ food.name }}</strong>
+      @click="select(food)"
+    >
+      <div class="row">
+        <div class="col">
+          <strong>{{ food.name }}</strong>
           <n-tag size="small">{{ food.type }}</n-tag>
-          </div>
-          <div class="col right-align">
+        </div>
+        <div class="col right-align">
           <n-button quaternary circle size="small" @click.stop="favorites.toggle(food.id)">
             <template #icon>
               <n-icon :component="favorites.isFavorite(food.id) ? Heart : HeartOutline" />
@@ -117,9 +117,9 @@ const results = computed(() => foods.searchResults)
               <td>{{ Math.round(food.nutrition100g.total_fat) }}</td>
             </tr>
           </tbody>
-          </table>
-          <small>per 100{{ food.servingMetric.unit }}</small>
-        </div>
+        </table>
+        <small>per 100{{ food.servingMetric.unit }}</small>
+      </div>
     </n-card>
   </div>
 </template>

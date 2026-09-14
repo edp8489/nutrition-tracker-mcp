@@ -1,26 +1,42 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Capacitor } from '@capacitor/core'
+import {
+  BarChartOutline,
+  CreateOutline,
+  InformationCircleOutline,
+  MoonOutline,
+  RestaurantOutline,
+  SunnyOutline,
+} from '@vicons/ionicons5'
 import { useDatasetStore } from '@/stores/dataset'
+import { useTheme } from '@/composables/useTheme'
 
 const dataset = useDatasetStore()
+const router = useRouter()
+const { theme, isDark, toggle } = useTheme()
 
 onMounted(() => {
   dataset.init()
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker
-      .register('/nutrition-tracker/sw.js')
-      .catch(() => {
-        // SW registration failure non-fatal in dev
-      })
+  if (!Capacitor.isNativePlatform() && import.meta.env.PROD && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {})
   }
 })
+
+const navItems = [
+  { to: '/recipes', label: 'Recipes', icon: RestaurantOutline },
+  { to: '/log', label: 'Log', icon: CreateOutline },
+  { to: '/reports', label: 'Reports', icon: BarChartOutline },
+  { to: '/about', label: 'About', icon: InformationCircleOutline },
+]
 </script>
 
 <template>
   <n-config-provider :theme="theme">
     <main>
-    <router-view />
-  </main>
+      <router-view />
+    </main>
     <nav class="bottom">
       <n-button
         v-for="item in navItems"

@@ -60,8 +60,8 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => {
   const textColor = themeVars.value.textColor2
   const gridColor = themeVars.value.borderColor
   return {
-  responsive: true,
-  scales: {
+    responsive: true,
+    scales: {
       x: {
         stacked: true,
         ticks: { color: textColor },
@@ -73,16 +73,16 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => {
         ticks: { color: textColor },
         grid: { color: gridColor },
       },
-  },
-  plugins: {
+    },
+    plugins: {
       legend: { position: 'bottom', labels: { color: textColor } },
-  },
-  onClick: (_evt, elements) => {
-    if (elements.length > 0) {
-      const idx = elements[0].index
-      emit('click-day', props.labels[idx])
-    }
-  },
+    },
+    onClick: (_evt, elements) => {
+      if (elements.length > 0) {
+        const idx = elements[0].index
+        emit('click-day', props.labels[idx])
+      }
+    },
   }
 })
 </script>

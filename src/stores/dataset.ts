@@ -1,10 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { db } from '@/db/dexie'
 import { useFoodsStore } from './foods'
 import type { Food, ChunkManifest } from '@/types/domain'
 
-const BASE = '/nutrition-tracker/data'
+// Subset + manifest are bundled in the app package (public/data) on every platform.
+const LOCAL_BASE = `${import.meta.env.BASE_URL}data`
+
+// On Android (Capacitor WebView) there is no nginx origin — full chunks are
+// lazy-fetched from the remote server configured via VITE_CHUNK_BASE
+// (ADR-0019). Web fetches same-origin relative to the deploy subpath.
+const CHUNK_BASE = Capacitor.isNativePlatform()
+  ? (import.meta.env.VITE_CHUNK_BASE ?? '')
+  : `${import.meta.env.BASE_URL}data`
 
 export const useDatasetStore = defineStore('dataset', () => {
   const manifest = ref<ChunkManifest | null>(null)
@@ -25,7 +34,7 @@ export const useDatasetStore = defineStore('dataset', () => {
 
   async function loadManifest(): Promise<void> {
     try {
-      const res = await fetch(`${BASE}/manifest.json`)
+      const res = await fetch(`${LOCAL_BASE}/manifest.json`)
       if (!res.ok) return
       manifest.value = (await res.json()) as ChunkManifest
     } catch {
@@ -35,7 +44,7 @@ export const useDatasetStore = defineStore('dataset', () => {
 
   async function loadSubset(): Promise<void> {
     try {
-      const res = await fetch(`${BASE}/subset.jsonl`)
+      const res = await fetch(`${LOCAL_BASE}/subset.jsonl`)
       if (!res.ok) return
       const reader = res.body?.getReader()
       if (!reader) return
@@ -80,9 +89,11 @@ export const useDatasetStore = defineStore('dataset', () => {
       c.firstChars.split(',').includes(bucket),
     )
     if (!entry) return
+    // Native without remote configured: subset-only, skip remote chunk fetch (ADR-0019)
+    if (Capacitor.isNativePlatform() && !CHUNK_BASE) return
     loadingChunk.value = bucket
     try {
-      const res = await fetch(`${BASE}/chunks/${entry.chunkFile}`)
+      const res = await fetch(`${CHUNK_BASE}/chunks/${entry.chunkFile}`)
       if (!res.ok) return
       const reader = res.body?.getReader()
       if (!reader) return
