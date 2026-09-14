@@ -15,6 +15,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import {
+  computeRecipeMacros,
+  computeRecipeMacrosSchema,
+  convertUnits,
+  convertUnitsSchema,
+  filterFoods,
+  filterFoodsSchema,
+  getIngredientMacros,
+  getIngredientMacrosSchema,
   searchIngredient,
   searchIngredientSchema,
   type FoodRepository,
@@ -28,6 +36,31 @@ const DB_PATH = resolve(
 )
 const PORT = Number(process.env.NUTRITION_PORT ?? 3000)
 
+/** Wrap a shared tool: result → JSON text; throw → isError result. */
+function toolHandler<TParams>(
+  fn: (params: TParams, repo: FoodRepository) => unknown,
+  repo: FoodRepository,
+) {
+  return async (args: TParams) => {
+    try {
+      const result = fn(args, repo)
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+      }
+    } catch (err) {
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: err instanceof Error ? err.message : String(err),
+          },
+        ],
+        isError: true,
+      }
+    }
+  }
+}
+
 function buildServer(repo: FoodRepository): McpServer {
   const server = new McpServer({ name: 'nutrition-tracker', version: '0.1.0' })
 
@@ -38,15 +71,60 @@ function buildServer(repo: FoodRepository): McpServer {
         'Search the OpenNutrition food dataset by name or alias (e.g. "grilled chicken ' +
         'breast" hits the cooked everyday entry). FTS5 BM25 over name, alternate names, ' +
         'and labels. Returns id, name, category, serving anchors, and per-serving ' +
-        'macros. Use getIngredientMacros for full nutrient detail.',
+        'macros.',
       inputSchema: searchIngredientSchema,
     },
-    async (args) => {
-      const result = searchIngredient(args, repo)
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      }
+    toolHandler(searchIngredient, repo),
+  )
+
+  server.registerTool(
+    'getIngredientMacros',
+    {
+      description:
+        'Full nutrient detail for one food, with measured flags per value ' +
+        '(unmeasured fields are "not reported", never "contains none"). Returns ' +
+        'per-100 g values, macros for a requested quantity (any unit), and the ' +
+        'metric serving. Use after searchIngredient.',
+      inputSchema: getIngredientMacrosSchema,
     },
+    toolHandler(getIngredientMacros, repo),
+  )
+
+  server.registerTool(
+    'computeRecipeMacros',
+    {
+      description:
+        'Deterministic recipe macro computation — all summation happens here, ' +
+        'never in the model. Each ingredient is normalized to metric (household ' +
+        "units like cups use the food's dataset serving anchor), summed, and " +
+        'divided by servings.',
+      inputSchema: computeRecipeMacrosSchema,
+    },
+    toolHandler(computeRecipeMacros, repo),
+  )
+
+  server.registerTool(
+    'filterFoods',
+    {
+      description:
+        'Filter foods by nutrient range per 100 g, or by a server-defined dietary ' +
+        'preset (keto, low_sodium, low_carb, high_protein, gluten_free best-effort). ' +
+        'The model never invents criteria — thresholds come from the server.',
+      inputSchema: filterFoodsSchema,
+    },
+    toolHandler(filterFoods, repo),
+  )
+
+  server.registerTool(
+    'convertUnits',
+    {
+      description:
+        'Convert between metric, imperial, and household units. Pure units ' +
+        '(g, ml, oz, lb, fl_oz) convert via js-quantities; household units ' +
+        '(cup, slice, egg, …) require a foodId and use its dataset serving anchor.',
+      inputSchema: convertUnitsSchema,
+    },
+    toolHandler(convertUnits, repo),
   )
 
   return server

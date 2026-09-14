@@ -16,6 +16,7 @@ import type {
   NutrientFilterRow,
   SearchOptions,
   SearchRow,
+  TagFilterOptions,
 } from '@nutrition-tracker/shared'
 
 interface FoodRow {
@@ -151,6 +152,26 @@ export class BunSqliteRepository implements FoodRepository {
       .query<FoodRow & { value: number }, Array<string | number>>(sql)
       .all(...params)
       .map((row) => ({ food: rowToFood(row), value: row.value }))
+  }
+
+  filterWithoutAnalysisTag(tag: string, options: TagFilterOptions = {}): Food[] {
+    if (!/^[a-z0-9_]+$/.test(tag)) return []
+    const limit = options.limit ?? 50
+    const sql = `
+      SELECT foods.*
+      FROM foods
+      WHERE foods.ingredientAnalysis IS NOT NULL
+        AND COALESCE(json_array_length(json_extract(foods.ingredientAnalysis, '$.${tag}')), 0) = 0
+        ${options.type ? 'AND foods.type = ?' : ''}
+      LIMIT ?
+    `
+    const params: Array<string | number> = []
+    if (options.type) params.push(options.type)
+    params.push(limit)
+    return this.#db
+      .query<FoodRow, Array<string | number>>(sql)
+      .all(...params)
+      .map(rowToFood)
   }
 
   close(): void {
