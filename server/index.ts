@@ -4,7 +4,8 @@
  *
  * Usage:
  *   bun run server                 # streamable HTTP on :3000/mcp
- *   bun run server -- --stdio      # stdio transport
+ *   bun run server --host           # bind all interfaces (OpenWebUI on another machine)
+ *   bun run server -- --stdio       # stdio transport
  *
  * Env (see .env.example; Bun auto-loads .env):
  *   NUTRITION_DB_PATH  path to opennutrition.sqlite (default server/data/)
@@ -20,6 +21,7 @@ import {
   type FoodRepository,
 } from '@nutrition-tracker/shared'
 import { existsSync } from 'node:fs'
+import { networkInterfaces } from 'node:os'
 import { resolve } from 'node:path'
 import { BunSqliteRepository } from './db'
 
@@ -27,6 +29,27 @@ const DB_PATH = resolve(
   process.env.NUTRITION_DB_PATH ?? 'server/data/opennutrition.sqlite',
 )
 const PORT = Number(process.env.NUTRITION_PORT ?? 3000)
+
+/** Parse --host [address]; bare flag binds 0.0.0.0. */
+function parseHost(argv: string[]): string | null {
+  const i = argv.indexOf('--host')
+  if (i === -1) return null
+  const value = argv[i + 1]
+  return value && !value.startsWith('-') ? value : '0.0.0.0'
+}
+
+/** Non-internal IPv4 /mcp URLs for other machines on the network. */
+function lanUrls(port: number): string[] {
+  const urls: string[] = []
+  for (const ifaces of Object.values(networkInterfaces())) {
+    for (const ni of ifaces ?? []) {
+      if (ni.family === 'IPv4' && !ni.internal) {
+        urls.push(`http://${ni.address}:${port}/mcp`)
+      }
+    }
+  }
+  return urls
+}
 
 function buildServer(repo: FoodRepository): McpServer {
   const server = new McpServer({ name: 'nutrition-tracker', version: '0.1.0' })
@@ -79,8 +102,10 @@ async function main(): Promise<void> {
     return transport.handleRequest(req)
   }
 
+  const host = parseHost(process.argv)
   Bun.serve({
     port: PORT,
+    hostname: host ?? undefined,
     fetch: (req) => {
       const { pathname } = new URL(req.url)
       if (pathname === '/mcp' || pathname === '/mcp/') return handleMcp(req)
@@ -89,6 +114,11 @@ async function main(): Promise<void> {
   })
 
   console.log(`nutrition-tracker MCP: streamable HTTP on http://localhost:${PORT}/mcp`)
+  if (host) {
+    for (const url of lanUrls(PORT)) {
+      console.log(`  LAN: ${url}`)
+    }
+  }
 }
 
 main().catch((err) => {
