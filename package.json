@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
-    "build:dataset": "node scripts/build-subset.mjs",
+    "build:dataset": "bun scripts/build-subset.mjs",
+    "build:sqlite": "bun scripts/build-sqlite.mjs",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.ts,.js --fix",
     "format": "prettier --write \"src/**/*.{vue,ts,js}\" \"scripts/**/*.{mjs,js}\"",
