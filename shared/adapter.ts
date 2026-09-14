@@ -30,6 +30,11 @@ export interface NutrientFilterOptions {
   limit?: number
 }
 
+export interface TagFilterOptions {
+  type?: FoodType | null
+  limit?: number
+}
+
 export interface FoodRepository {
   getFoodById(id: string): Food | null
   search(query: string, options?: SearchOptions): SearchRow[]
@@ -39,4 +44,10 @@ export interface FoodRepository {
     max: number | null,
     options?: NutrientFilterOptions,
   ): NutrientFilterRow[]
+  /**
+   * Foods that carry ingredient_analysis data but have no tokens under the
+   * given tag (e.g. 'gluten') — the best-effort gluten-free basis (ADR-0023).
+   * Foods without ingredient_analysis at all are excluded.
+   */
+  filterWithoutAnalysisTag(tag: string, options?: TagFilterOptions): Food[]
 }

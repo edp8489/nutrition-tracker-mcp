@@ -32,6 +32,7 @@ function fakeRepo(byType: Record<string, SearchRow[]>): FakeRepo {
       return byType.all ?? []
     },
     filterByNutrient: () => [],
+    filterWithoutAnalysisTag: () => [],
   }
   return { repo, calls }
 }

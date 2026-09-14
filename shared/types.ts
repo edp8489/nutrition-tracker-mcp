@@ -167,7 +167,8 @@ export interface ComputeRecipeMacrosResult {
 
 // --- filterFoods -----------------------------------------------------------
 
-export type DietPreset = 'keto' | 'low_sodium' | 'low_carb' | 'high_protein'
+export type DietPreset =
+  'keto' | 'low_sodium' | 'low_carb' | 'high_protein' | 'gluten_free'
 
 export interface FilterFoodsParams {
   nutrient?: string
