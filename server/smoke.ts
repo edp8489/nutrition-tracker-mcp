@@ -11,6 +11,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import { existsSync } from 'node:fs'
 
 const CHICKEN_ID = 'fd_2dObzdqa6o2J' // Chicken Breast, Boneless Skinless, Cooked
 const RICE_ID = 'fd_gbtVB7G9twmc' // Rice, Cooked (1 cup = 160 g)
@@ -192,12 +193,28 @@ async function main(): Promise<void> {
     await exercise(client, 'stdio')
     await client.close()
   } else {
-    const url = new URL(`http://localhost:${process.env.NUTRITION_PORT ?? 3000}/mcp`)
-    const transport = new StreamableHTTPClientTransport(url)
+    const port = process.env.NUTRITION_PORT ?? 3000
+    const transport = new StreamableHTTPClientTransport(
+      new URL(`http://localhost:${port}/mcp`),
+    )
     const client = new Client({ name: 'smoke', version: '0.1.0' })
     await client.connect(transport)
     await exercise(client, 'http')
     await client.close()
+
+    // Static mount (ADR-0021): same process serves the built app
+    if (existsSync('dist/index.html')) {
+      const root = await fetch(`http://localhost:${port}/`)
+      assert(
+        root.status === 200 && (await root.text()).toLowerCase().includes('<!doctype'),
+        'dist/ served at /',
+      )
+      const base = await fetch(`http://localhost:${port}/nutrition-tracker/`)
+      assert(base.status === 200, 'dist/ served at Vite base /nutrition-tracker/')
+      console.log('[http] static: dist/ served at / and /nutrition-tracker/')
+    } else {
+      console.log('[http] static: dist/ not built — skipped')
+    }
   }
 }
 

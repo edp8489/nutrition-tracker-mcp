@@ -6,6 +6,14 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   base: '/nutrition-tracker/',
   plugins: [vue()],
+  server: {
+    proxy: {
+      // ADR-0021: dev proxies MCP calls to the local MCP server process
+      '/mcp': {
+        target: `http://localhost:${process.env.NUTRITION_PORT ?? 3000}`,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

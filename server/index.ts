@@ -3,8 +3,11 @@
  * tool library. Streamable HTTP (chat clients + personal web app) and stdio.
  *
  * Usage:
- *   bun run server                 # streamable HTTP on :3000/mcp
+ *   bun run server                 # streamable HTTP on :3000/mcp + dist/ statics
  *   bun run server -- --stdio      # stdio transport
+ *
+ * Also serves the built web app (dist/) at / and at the Vite base path
+ * /nutrition-tracker/ — one process for API + app (ADR-0021).
  *
  * Env (see .env.example; Bun auto-loads .env):
  *   NUTRITION_DB_PATH  path to opennutrition.sqlite (default server/data/)
@@ -28,13 +31,59 @@ import {
   type FoodRepository,
 } from '@nutrition-tracker/shared'
 import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import { BunSqliteRepository } from './db'
 
 const DB_PATH = resolve(
   process.env.NUTRITION_DB_PATH ?? 'server/data/opennutrition.sqlite',
 )
 const PORT = Number(process.env.NUTRITION_PORT ?? 3000)
+
+const DIST = resolve('dist')
+const BASE = '/nutrition-tracker' // Vite build base (ADR-0013)
+
+const MIME: Record<string, string> = {
+  '.css': 'text/css',
+  '.html': 'text/html',
+  '.ico': 'image/x-icon',
+  '.js': 'text/javascript',
+  '.json': 'application/json',
+  '.mjs': 'text/javascript',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.wasm': 'application/wasm',
+  '.webmanifest': 'application/manifest+json',
+  '.woff2': 'font/woff2',
+}
+
+/**
+ * Serve the built web app (ADR-0021): one process serves /mcp + dist/. The
+ * web build's Vite base (/nutrition-tracker/, ADR-0013) is stripped so both /
+ * and the subpath work; history-mode routes fall back to index.html.
+ */
+async function serveStatic(pathname: string): Promise<Response> {
+  let path = pathname
+  if (path === BASE || path.startsWith(`${BASE}/`)) path = path.slice(BASE.length)
+  const file = resolve(DIST, path.replace(/^\/+/, '') || 'index.html')
+  if (!file.startsWith(DIST + sep)) return new Response('Not found', { status: 404 })
+  const f = Bun.file(file)
+  if (await f.exists()) {
+    const ext = file.slice(file.lastIndexOf('.'))
+    return new Response(f, {
+      headers: { 'content-type': MIME[ext] ?? 'application/octet-stream' },
+    })
+  }
+  // History-mode SPA fallback (src/router) for extensionless paths; missing
+  // assets 404 so the browser/PWA sees real errors.
+  const last = path.slice(path.lastIndexOf('/') + 1)
+  if (!last.includes('.')) {
+    const index = Bun.file(join(DIST, 'index.html'))
+    if (await index.exists()) {
+      return new Response(index, { headers: { 'content-type': 'text/html' } })
+    }
+  }
+  return new Response('Not found', { status: 404 })
+}
 
 /** Wrap a shared tool: result → JSON text; throw → isError result. */
 function toolHandler<TParams>(
@@ -162,11 +211,16 @@ async function main(): Promise<void> {
     fetch: (req) => {
       const { pathname } = new URL(req.url)
       if (pathname === '/mcp' || pathname === '/mcp/') return handleMcp(req)
-      return new Response('Not found', { status: 404 })
+      return serveStatic(pathname)
     },
   })
 
   console.log(`nutrition-tracker MCP: streamable HTTP on http://localhost:${PORT}/mcp`)
+  console.log(
+    existsSync(join(DIST, 'index.html'))
+      ? `nutrition-tracker MCP: dist/ served at / and ${BASE}/ (ADR-0021)`
+      : 'nutrition-tracker MCP: dist/ missing — run `bun run build` to serve the web app',
+  )
 }
 
 main().catch((err) => {
