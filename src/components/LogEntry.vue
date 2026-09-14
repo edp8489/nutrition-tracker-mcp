@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { CreateOutline, TrashOutline } from '@vicons/ionicons5'
 import type { LogEntry } from '@/types/domain'
 
 const props = defineProps<{
@@ -33,13 +34,21 @@ const m = computed(() => props.entry.snapshotMacros)
   <tr>
     <td>{{ hourLabel }}</td>
     <td>{{ title }}</td>
-    <td class="right-align">{{ Math.round(m.calories) }}</td>
-    <td class="right-align">{{ Math.round(m.protein) }}</td>
-    <td class="right-align">{{ Math.round(m.carbs) }}</td>
-    <td class="right-align">{{ Math.round(m.fat) }}</td>
+    <td>{{ Math.round(m.calories) }}</td>
+    <td>{{ Math.round(m.protein) }}</td>
+    <td>{{ Math.round(m.carbs) }}</td>
+    <td>{{ Math.round(m.fat) }}</td>
     <td>
-      <button class="chip circle" @click="emit('edit', entry.id)"><i>edit</i></button>
-      <button class="chip circle" @click="emit('delete', entry.id)"><i>delete</i></button>
+      <n-button quaternary circle size="small" @click="emit('edit', entry.id)">
+        <template #icon>
+          <n-icon :component="CreateOutline" />
+        </template>
+      </n-button>
+      <n-button quaternary circle size="small" @click="emit('delete', entry.id)">
+        <template #icon>
+          <n-icon :component="TrashOutline" />
+        </template>
+      </n-button>
     </td>
   </tr>
 </template>

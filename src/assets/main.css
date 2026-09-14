@@ -3,10 +3,45 @@ nav.bottom {
   bottom: 0;
   width: 100%;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.nav-toggle {
+  position: absolute;
+  right: 8px;
+  top: -52px;
 }
 
 main {
   padding-bottom: 80px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.right-align {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.center-align {
+  text-align: center;
 }
 
 .attribution-footer {

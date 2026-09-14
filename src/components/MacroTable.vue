@@ -7,7 +7,7 @@ defineProps<{
 </script>
 
 <template>
-  <table class="macro-table border striped">
+  <n-table striped :bordered="true" class="macro-table">
     <thead>
       <tr>
         <th>Day</th>
@@ -26,5 +26,5 @@ defineProps<{
         <td>{{ Math.round(row.macros.fat) }}</td>
       </tr>
     </tbody>
-  </table>
+  </n-table>
 </template>

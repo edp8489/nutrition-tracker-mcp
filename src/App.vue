@@ -17,25 +17,33 @@ onMounted(() => {
 </script>
 
 <template>
-  <nav class="bottom">
-    <a href="/nutrition-tracker/recipes" @click.prevent="$router.push('/recipes')">
-      <i>restaurant</i>
-      <span>Recipes</span>
-    </a>
-    <a href="/nutrition-tracker/log" @click.prevent="$router.push('/log')">
-      <i>edit_note</i>
-      <span>Log</span>
-    </a>
-    <a href="/nutrition-tracker/reports" @click.prevent="$router.push('/reports')">
-      <i>bar_chart</i>
-      <span>Reports</span>
-    </a>
-    <a href="/nutrition-tracker/about" @click.prevent="$router.push('/about')">
-      <i>info</i>
-      <span>About</span>
-    </a>
-  </nav>
-  <main class="responsive">
+  <n-config-provider :theme="theme">
+    <main>
     <router-view />
   </main>
+    <nav class="bottom">
+      <n-button
+        v-for="item in navItems"
+        :key="item.to"
+        quaternary
+        :type="$route.path === item.to ? 'primary' : 'default'"
+        @click="router.push(item.to)"
+      >
+        <template #icon>
+          <n-icon :component="item.icon" />
+        </template>
+        {{ item.label }}
+      </n-button>
+      <n-button
+        quaternary
+        class="nav-toggle"
+        :title="isDark ? 'Light mode' : 'Dark mode'"
+        @click="toggle"
+      >
+        <template #icon>
+          <n-icon :component="isDark ? SunnyOutline : MoonOutline" />
+        </template>
+      </n-button>
+    </nav>
+  </n-config-provider>
 </template>

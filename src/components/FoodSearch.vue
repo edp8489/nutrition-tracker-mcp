@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { Heart, HeartOutline, SearchOutline } from '@vicons/ionicons5'
 import { useFoodsStore } from '@/stores/foods'
 import { useFavoritesStore } from '@/stores/favorites'
 import { useDatasetStore } from '@/stores/dataset'
 import type { Food, FoodType } from '@/types/domain'
 
-const props = defineProps<{
+defineProps<{
   modelValue?: Food | null
 }>()
 
@@ -20,6 +21,14 @@ const dataset = useDatasetStore()
 
 const query = ref('')
 const typeFilter = ref<FoodType | ''>('')
+
+const typeOptions: Array<{ label: string; value: FoodType | '' }> = [
+  { label: 'All', value: '' },
+  { label: 'Everyday', value: 'everyday' },
+  { label: 'Grocery', value: 'grocery' },
+  { label: 'Prepared', value: 'prepared' },
+  { label: 'Restaurant', value: 'restaurant' },
+]
 
 let debounce: ReturnType<typeof setTimeout> | null = null
 
@@ -51,72 +60,53 @@ const results = computed(() => foods.searchResults)
 
 <template>
   <div class="food-search">
-    <div class="row">
-      <div class="field prefix suffix border round">
-        <i>search</i>
-        <input
-          v-model="query"
-          type="text"
-          placeholder="Search foods by name..."
-        />
-        <i v-if="query" class="link" @click="query = ''">close</i>
-      </div>
+    <n-input v-model:value="query" placeholder="Search foods by name..." clearable>
+      <template #prefix>
+        <n-icon :component="SearchOutline" />
+      </template>
+    </n-input>
+
+    <div class="row" style="margin-top: 8px">
+      <n-tag
+        v-for="t in typeOptions"
+        :key="t.value"
+        checkable
+        round
+        :checked="typeFilter === t.value"
+        @update:checked="typeFilter = t.value"
+      >
+        {{ t.label }}
+      </n-tag>
     </div>
-    <div class="row">
-      <label class="chip" :class="{ active: typeFilter === '' }">
-        <input
-          type="radio"
-          name="type"
-          value=""
-          v-model="typeFilter"
-        />
-        <span>All</span>
-      </label>
-      <label class="chip" :class="{ active: typeFilter === 'everyday' }">
-        <input type="radio" name="type" value="everyday" v-model="typeFilter" />
-        <span>Everyday</span>
-      </label>
-      <label class="chip" :class="{ active: typeFilter === 'grocery' }">
-        <input type="radio" name="type" value="grocery" v-model="typeFilter" />
-        <span>Grocery</span>
-      </label>
-      <label class="chip" :class="{ active: typeFilter === 'prepared' }">
-        <input type="radio" name="type" value="prepared" v-model="typeFilter" />
-        <span>Prepared</span>
-      </label>
-      <label class="chip" :class="{ active: typeFilter === 'restaurant' }">
-        <input type="radio" name="type" value="restaurant" v-model="typeFilter" />
-        <span>Restaurant</span>
-      </label>
-    </div>
-    <div v-if="dataset.loadingChunk" class="row">
-      <progress></progress>
+
+    <div v-if="dataset.loadingChunk" class="row" style="margin-top: 8px">
+      <n-spin :size="14" />
       <small>Loading data chunk...</small>
     </div>
-    <div class="row">
-      <div
+
+    <n-card
         v-for="food in results"
         :key="food.id"
-        class="card small padding"
-        style="cursor: pointer"
+      size="small"
+      style="cursor: pointer; margin-top: 8px"
         @click="select(food)"
       >
         <div class="row">
           <div class="col">
             <strong>{{ food.name }}</strong>
-            <small class="chip">{{ food.type }}</small>
+          <n-tag size="small">{{ food.type }}</n-tag>
           </div>
           <div class="col right-align">
-            <button
-              class="chip circle"
-              @click.stop="favorites.toggle(food.id)"
-            >
-              <i>{{ favorites.isFavorite(food.id) ? 'favorite' : 'favorite_border' }}</i>
-            </button>
-          </div>
+          <n-button quaternary circle size="small" @click.stop="favorites.toggle(food.id)">
+            <template #icon>
+              <n-icon :component="favorites.isFavorite(food.id) ? Heart : HeartOutline" />
+            </template>
+          </n-button>
         </div>
-        <div class="row macro-table">
-          <table>
+      </div>
+      <div class="row" style="justify-content: space-between">
+        <table class="macro-table">
+          <tbody>
             <tr>
               <th>kcal</th><th>P</th><th>C</th><th>F</th>
             </tr>
@@ -126,10 +116,10 @@ const results = computed(() => foods.searchResults)
               <td>{{ Math.round(food.nutrition100g.carbohydrates) }}</td>
               <td>{{ Math.round(food.nutrition100g.total_fat) }}</td>
             </tr>
+          </tbody>
           </table>
           <small>per 100{{ food.servingMetric.unit }}</small>
         </div>
-      </div>
-    </div>
+    </n-card>
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
 import { useRouter } from 'vue-router'
 import { useLogStore } from '@/stores/log'
 import MacroChart from '@/components/MacroChart.vue'
@@ -73,22 +74,30 @@ function thisWeek() {
   <header><h5>Reports</h5></header>
 
   <div class="row">
-    <button class="chip circle" @click="prevWeek"><i>chevron_left</i></button>
-    <button class="chip" @click="thisWeek">This week</button>
-    <button class="chip circle" @click="nextWeek"><i>chevron_right</i></button>
+    <n-button quaternary circle @click="prevWeek">
+      <template #icon>
+        <n-icon :component="ChevronBackOutline" />
+      </template>
+    </n-button>
+    <n-button @click="thisWeek">This week</n-button>
+    <n-button quaternary circle @click="nextWeek">
+      <template #icon>
+        <n-icon :component="ChevronForwardOutline" />
+      </template>
+    </n-button>
   </div>
 
-  <article class="card padding">
+  <n-card style="margin-top: 8px">
     <MacroChart
       :labels="weekLabels"
       :data="weekData"
       @click-day="clickDay"
     />
-  </article>
+  </n-card>
 
-  <article class="card padding">
+  <n-card style="margin-top: 8px">
     <MacroTable :rows="tableRows" />
-  </article>
+  </n-card>
 
   <AttributionFooter />
 </template>

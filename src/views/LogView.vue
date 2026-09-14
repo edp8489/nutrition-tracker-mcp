@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { AddOutline } from '@vicons/ionicons5'
 import { useLogStore } from '@/stores/log'
 import { useRecipesStore } from '@/stores/recipes'
 import { useFoodsStore } from '@/stores/foods'
@@ -30,6 +31,18 @@ const portions = ref(1)
 const editingEntry = ref<LogEntry | null>(null)
 
 const focusDate = ref<string>((route.query.date as string) || today)
+
+const unitOptions: Array<{ label: Unit; value: Unit }> = [
+  { label: 'g', value: 'g' },
+  { label: 'ml', value: 'ml' },
+]
+
+const recipeOptions = computed(() =>
+  recipes.recipes.map((r) => ({
+    label: `${r.name} (${Math.round(r.perPortionMacros.calories)} kcal/portion)`,
+    value: r.id,
+  })),
+)
 
 onMounted(async () => {
   const now = new Date()
@@ -131,10 +144,10 @@ function dayTotalFor(date: string) {
 <template>
   <header><h5>Food Log</h5></header>
 
-  <article
+  <n-card
     v-for="[date, dayEntries] in log.entriesByDate"
     :key="date"
-    class="card padding"
+    style="margin-top: 8px"
   >
     <div class="row">
       <div class="col">
@@ -147,12 +160,24 @@ function dayTotalFor(date: string) {
           {{ Math.round(dayTotalFor(date).carbs) }}g C ·
           {{ Math.round(dayTotalFor(date).fat) }}g F
         </small>
-        <button class="chip" @click="startAdd(date, 'food')"><i>add</i>Food</button>
-        <button class="chip" @click="startAdd(date, 'recipe')"><i>add</i>Recipe</button>
+        <div class="row" style="justify-content: flex-end">
+          <n-button size="small" @click="startAdd(date, 'food')">
+            <template #icon>
+              <n-icon :component="AddOutline" />
+            </template>
+            Food
+          </n-button>
+          <n-button size="small" @click="startAdd(date, 'recipe')">
+            <template #icon>
+              <n-icon :component="AddOutline" />
+            </template>
+            Recipe
+          </n-button>
+        </div>
       </div>
     </div>
 
-    <table class="macro-table border striped">
+    <n-table striped :bordered="true" class="macro-table">
       <thead>
         <tr>
           <th>Hour</th><th>Item</th><th>kcal</th><th>P</th><th>C</th><th>F</th><th></th>
@@ -167,37 +192,45 @@ function dayTotalFor(date: string) {
           @delete="deleteEntry"
         />
       </tbody>
-    </table>
-  </article>
+    </n-table>
+  </n-card>
 
   <p v-if="log.entries.length === 0" class="center-align">
     No log entries yet. Add your first food.
   </p>
 
-  <dialog v-if="addingForDate" class="active">
-    <h5>Add {{ addMode === 'food' ? 'Food' : 'Recipe' }} — {{ addingForDate }}</h5>
-
-    <div class="field border round">
-      <span class="label">Timestamp (hour)</span>
+  <n-modal
+    v-if="addingForDate"
+    :show="true"
+    preset="card"
+    :title="`Add ${addMode === 'food' ? 'Food' : 'Recipe'} — ${addingForDate}`"
+    style="width: 90%; max-width: 640px"
+    @update:show="(v: boolean) => { if (!v) cancelAdd() }"
+  >
+    <div class="col" style="margin-bottom: 8px">
+      <label>Timestamp (hour)</label>
       <input v-model="timestamp" type="datetime-local" />
     </div>
 
     <div v-if="addMode === 'food'">
       <FoodSearch @select="onFoodSelect" />
-      <div v-if="selectedFood" class="row">
-        <div class="field border round col">
-          <span class="label">Quantity</span>
-          <input v-model.number="quantity" type="number" min="0" step="1" />
-        </div>
-        <div class="field border round col">
-          <span class="label">Unit</span>
-          <select v-model="unit">
-            <option value="g">g</option>
-            <option value="ml">ml</option>
-          </select>
-        </div>
+      <div v-if="selectedFood" class="row" style="margin-top: 8px">
+        <n-input-number
+          :value="quantity"
+          :min="0"
+          :step="1"
+          @update:value="(v: number | null) => (quantity = v ?? 0)"
+        >
+          <template #prefix>Quantity</template>
+        </n-input-number>
+        <n-select
+          :value="unit"
+          :options="unitOptions"
+          style="width: 100px"
+          @update:value="(v: Unit) => (unit = v)"
+        />
         <div class="col">
-          <p v-if="selectedFood">
+          <p>
             {{ Math.round(foodMacrosForQuantity(selectedFood.nutrition100g, quantity).calories) }} kcal ·
             {{ Math.round(foodMacrosForQuantity(selectedFood.nutrition100g, quantity).protein) }}g P ·
             {{ Math.round(foodMacrosForQuantity(selectedFood.nutrition100g, quantity).carbs) }}g C ·
@@ -205,45 +238,56 @@ function dayTotalFor(date: string) {
           </p>
         </div>
       </div>
-      <nav>
-        <button class="border round" @click="cancelAdd">Cancel</button>
-        <button class="round" :disabled="!selectedFood" @click="saveFoodEntry">Save</button>
-      </nav>
+      <div class="row" style="justify-content: flex-end; margin-top: 8px">
+        <n-button @click="cancelAdd">Cancel</n-button>
+        <n-button type="primary" :disabled="!selectedFood" @click="saveFoodEntry">Save</n-button>
+      </div>
     </div>
 
     <div v-else>
-      <div class="field suffix border round">
-        <select v-model="selectedRecipeId">
-          <option :value="null" disabled>Select a recipe...</option>
-          <option v-for="r in recipes.recipes" :key="r.id" :value="r.id">
-            {{ r.name }} ({{ Math.round(r.perPortionMacros.calories) }} kcal/portion)
-          </option>
-        </select>
-        <i>arrow_drop_down</i>
+      <n-select
+        v-model:value="selectedRecipeId"
+        :options="recipeOptions"
+        placeholder="Select a recipe..."
+        filterable
+      />
+      <div style="margin-top: 8px">
+        <n-input-number
+          :value="portions"
+          :min="0.5"
+          :step="0.5"
+          @update:value="(v: number | null) => (portions = v ?? 1)"
+        >
+          <template #prefix>Portions</template>
+        </n-input-number>
       </div>
-      <div class="field border round">
-        <span class="label">Portions</span>
-        <input v-model.number="portions" type="number" min="0.5" step="0.5" />
+      <div class="row" style="justify-content: flex-end; margin-top: 8px">
+        <n-button @click="cancelAdd">Cancel</n-button>
+        <n-button type="primary" :disabled="!selectedRecipeId" @click="saveRecipeEntry">Save</n-button>
       </div>
-      <nav>
-        <button class="border round" @click="cancelAdd">Cancel</button>
-        <button class="round" :disabled="!selectedRecipeId" @click="saveRecipeEntry">Save</button>
-      </nav>
     </div>
-  </dialog>
+  </n-modal>
 
-  <dialog v-if="editingEntry" class="active">
-    <h5>Edit entry</h5>
+  <n-modal
+    v-if="editingEntry"
+    :show="true"
+    preset="card"
+    title="Edit entry"
+    style="width: 90%; max-width: 480px"
+    @update:show="(v: boolean) => { if (!v) editingEntry = null }"
+  >
     <p>{{ editingEntry.kind === 'recipe' ? editingEntry.recipeRef?.recipeName : editingEntry.foodRef?.foodName }}</p>
-    <div class="field border round">
-      <span class="label">Timestamp</span>
+    <div class="col">
+      <label>Timestamp</label>
       <input v-model="timestamp" type="datetime-local" />
     </div>
-    <nav>
-      <button class="border round" @click="editingEntry = null">Cancel</button>
-      <button class="round" @click="saveEdit">Save</button>
-    </nav>
-  </dialog>
+    <template #footer>
+      <div class="row" style="justify-content: flex-end">
+        <n-button @click="editingEntry = null">Cancel</n-button>
+        <n-button type="primary" @click="saveEdit">Save</n-button>
+      </div>
+    </template>
+  </n-modal>
 
   <AttributionFooter />
 </template>

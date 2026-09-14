@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { AddOutline, CreateOutline, TrashOutline } from '@vicons/ionicons5'
 import { useRecipesStore } from '@/stores/recipes'
 import RecipeEditor from '@/components/RecipeEditor.vue'
 import AttributionFooter from '@/components/AttributionFooter.vue'
@@ -22,11 +23,15 @@ function closeEditor() {
 
 <template>
   <header><h5>Recipes</h5></header>
-  <button class="round" @click="newRecipe">
-    <i>add</i><span>New recipe</span>
-  </button>
 
-  <article v-for="r in recipes.recipes" :key="r.id" class="card padding">
+  <n-button type="primary" @click="newRecipe">
+    <template #icon>
+      <n-icon :component="AddOutline" />
+    </template>
+    New recipe
+  </n-button>
+
+  <n-card v-for="r in recipes.recipes" :key="r.id" style="margin-top: 8px">
     <div class="row">
       <div class="col">
         <h6>{{ r.name }}</h6>
@@ -39,11 +44,19 @@ function closeEditor() {
           {{ Math.round(r.perPortionMacros.carbs) }}g C ·
           {{ Math.round(r.perPortionMacros.fat) }}g F
         </p>
-        <button class="chip circle" @click="editRecipe(r.id)"><i>edit</i></button>
-        <button class="chip circle" @click="recipes.deleteRecipe(r.id)"><i>delete</i></button>
+        <n-button quaternary circle size="small" @click="editRecipe(r.id)">
+          <template #icon>
+            <n-icon :component="CreateOutline" />
+          </template>
+        </n-button>
+        <n-button quaternary circle size="small" @click="recipes.deleteRecipe(r.id)">
+          <template #icon>
+            <n-icon :component="TrashOutline" />
+          </template>
+        </n-button>
       </div>
     </div>
-  </article>
+  </n-card>
 
   <p v-if="recipes.recipes.length === 0" class="center-align">
     No recipes yet. Create your first one.

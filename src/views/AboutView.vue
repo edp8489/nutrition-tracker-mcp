@@ -3,8 +3,7 @@
 <template>
   <header><h5>About</h5></header>
 
-  <article class="card padding">
-    <h6>Nutrition Tracker</h6>
+  <n-card title="Nutrition Tracker">
     <p>A personal calorie and macro tracker. Uses the OpenNutrition dataset (v2025.1).</p>
 
     <h6>Data attribution</h6>
@@ -30,7 +29,8 @@
 
     <h6>Tech</h6>
     <p>
-      Vue 3 + TypeScript + Vite · beerCSS · Pinia · Vue Router · Dexie (IndexedDB) · Chart.js
+      Vue 3 + TypeScript + Vite · Naive UI · Pinia · Vue Router · Dexie (IndexedDB) · Chart.js ·
+      Capacitor (Android)
     </p>
-  </article>
+  </n-card>
 </template>

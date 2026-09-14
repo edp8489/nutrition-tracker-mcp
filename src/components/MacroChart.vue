@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useThemeVars } from 'naive-ui'
 import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -32,6 +33,8 @@ const emit = defineEmits<{
   (e: 'click-day', date: string): void
 }>()
 
+const themeVars = useThemeVars()
+
 const chartData = computed<ChartData<'bar'>>(() => ({
   labels: props.labels,
   datasets: [
@@ -53,14 +56,26 @@ const chartData = computed<ChartData<'bar'>>(() => ({
   ],
 }))
 
-const chartOptions = computed<ChartOptions<'bar'>>(() => ({
+const chartOptions = computed<ChartOptions<'bar'>>(() => {
+  const textColor = themeVars.value.textColor2
+  const gridColor = themeVars.value.borderColor
+  return {
   responsive: true,
   scales: {
-    x: { stacked: true },
-    y: { stacked: true, beginAtZero: true },
+      x: {
+        stacked: true,
+        ticks: { color: textColor },
+        grid: { color: gridColor },
+      },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        ticks: { color: textColor },
+        grid: { color: gridColor },
+      },
   },
   plugins: {
-    legend: { position: 'bottom' },
+      legend: { position: 'bottom', labels: { color: textColor } },
   },
   onClick: (_evt, elements) => {
     if (elements.length > 0) {
@@ -68,7 +83,8 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
       emit('click-day', props.labels[idx])
     }
   },
-}))
+  }
+})
 </script>
 
 <template>
