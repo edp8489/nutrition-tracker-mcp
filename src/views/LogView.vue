@@ -5,7 +5,6 @@ import { AddOutline } from '@vicons/ionicons5'
 import { useLogStore } from '@/stores/log'
 import { useRecipesStore } from '@/stores/recipes'
 import { useFoodsStore } from '@/stores/foods'
-import { useDatasetStore } from '@/stores/dataset'
 import { foodMacrosForQuantity } from '@/utils/macros'
 import LogEntryComp from '@/components/LogEntry.vue'
 import FoodSearch from '@/components/FoodSearch.vue'
@@ -15,7 +14,6 @@ import type { Food, LogEntry, Unit } from '@/types/domain'
 const log = useLogStore()
 const recipes = useRecipesStore()
 const foodsStore = useFoodsStore()
-const dataset = useDatasetStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -29,6 +27,8 @@ const timestamp = ref('')
 const selectedRecipeId = ref<string | null>(null)
 const portions = ref(1)
 const editingEntry = ref<LogEntry | null>(null)
+const loadingDetail = ref(false)
+const detailError = ref(false)
 
 const focusDate = ref<string>((route.query.date as string) || today)
 
@@ -69,17 +69,29 @@ function startAdd(date: string, mode: 'food' | 'recipe') {
   }
 }
 
-function onFoodSelect(food: Food) {
-  selectedFood.value = food
-  quantity.value = food.servingMetric.quantity
-  unit.value = food.servingMetric.unit
+async function onFoodSelect(food: Food) {
+  detailError.value = false
+  loadingDetail.value = true
+  try {
+    // Search hits carry per-serving macros only — fetch per-100 g detail
+    // for the quantity preview and the log snapshot
+    selectedFood.value = await foodsStore.getDetail(food)
+  } catch {
+    selectedFood.value = null
+    detailError.value = true
+  } finally {
+    loadingDetail.value = false
+  }
+  if (selectedFood.value) {
+    quantity.value = selectedFood.value.servingMetric.quantity
+    unit.value = selectedFood.value.servingMetric.unit
+  }
 }
 
 async function saveFoodEntry() {
   if (!selectedFood.value) return
   await log.addFoodLog(
-    selectedFood.value.id,
-    selectedFood.value.name,
+    selectedFood.value,
     quantity.value,
     unit.value,
     new Date(timestamp.value).toISOString(),
@@ -180,7 +192,13 @@ function dayTotalFor(date: string) {
     <n-table striped :bordered="true" class="macro-table">
       <thead>
         <tr>
-          <th>Hour</th><th>Item</th><th>kcal</th><th>P</th><th>C</th><th>F</th><th></th>
+          <th>Hour</th>
+          <th>Item</th>
+          <th>kcal</th>
+          <th>P</th>
+          <th>C</th>
+          <th>F</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -205,7 +223,11 @@ function dayTotalFor(date: string) {
     preset="card"
     :title="`Add ${addMode === 'food' ? 'Food' : 'Recipe'} — ${addingForDate}`"
     style="width: 90%; max-width: 640px"
-    @update:show="(v: boolean) => { if (!v) cancelAdd() }"
+    @update:show="
+      (v: boolean) => {
+        if (!v) cancelAdd()
+      }
+    "
   >
     <div class="col" style="margin-bottom: 8px">
       <label>Timestamp (hour)</label>
@@ -214,6 +236,13 @@ function dayTotalFor(date: string) {
 
     <div v-if="addMode === 'food'">
       <FoodSearch @select="onFoodSelect" />
+      <div v-if="loadingDetail" class="row" style="margin-top: 8px">
+        <n-spin :size="14" />
+        <small>Loading macros…</small>
+      </div>
+      <p v-else-if="detailError" class="error" style="margin-top: 8px">
+        Couldn't load macros for this food — pick another or try again.
+      </p>
       <div v-if="selectedFood" class="row" style="margin-top: 8px">
         <n-input-number
           :value="quantity"
@@ -231,16 +260,33 @@ function dayTotalFor(date: string) {
         />
         <div class="col">
           <p>
-            {{ Math.round(foodMacrosForQuantity(selectedFood.nutrition100g, quantity).calories) }} kcal ·
-            {{ Math.round(foodMacrosForQuantity(selectedFood.nutrition100g, quantity).protein) }}g P ·
-            {{ Math.round(foodMacrosForQuantity(selectedFood.nutrition100g, quantity).carbs) }}g C ·
-            {{ Math.round(foodMacrosForQuantity(selectedFood.nutrition100g, quantity).fat) }}g F
+            {{
+              Math.round(
+                foodMacrosForQuantity(selectedFood.nutrition100g, quantity).calories,
+              )
+            }}
+            kcal ·
+            {{
+              Math.round(
+                foodMacrosForQuantity(selectedFood.nutrition100g, quantity).protein,
+              )
+            }}g P ·
+            {{
+              Math.round(
+                foodMacrosForQuantity(selectedFood.nutrition100g, quantity).carbs,
+              )
+            }}g C ·
+            {{
+              Math.round(foodMacrosForQuantity(selectedFood.nutrition100g, quantity).fat)
+            }}g F
           </p>
         </div>
       </div>
       <div class="row" style="justify-content: flex-end; margin-top: 8px">
         <n-button @click="cancelAdd">Cancel</n-button>
-        <n-button type="primary" :disabled="!selectedFood" @click="saveFoodEntry">Save</n-button>
+        <n-button type="primary" :disabled="!selectedFood" @click="saveFoodEntry"
+          >Save</n-button
+        >
       </div>
     </div>
 
@@ -263,7 +309,9 @@ function dayTotalFor(date: string) {
       </div>
       <div class="row" style="justify-content: flex-end; margin-top: 8px">
         <n-button @click="cancelAdd">Cancel</n-button>
-        <n-button type="primary" :disabled="!selectedRecipeId" @click="saveRecipeEntry">Save</n-button>
+        <n-button type="primary" :disabled="!selectedRecipeId" @click="saveRecipeEntry"
+          >Save</n-button
+        >
       </div>
     </div>
   </n-modal>
@@ -274,9 +322,19 @@ function dayTotalFor(date: string) {
     preset="card"
     title="Edit entry"
     style="width: 90%; max-width: 480px"
-    @update:show="(v: boolean) => { if (!v) editingEntry = null }"
+    @update:show="
+      (v: boolean) => {
+        if (!v) editingEntry = null
+      }
+    "
   >
-    <p>{{ editingEntry.kind === 'recipe' ? editingEntry.recipeRef?.recipeName : editingEntry.foodRef?.foodName }}</p>
+    <p>
+      {{
+        editingEntry.kind === 'recipe'
+          ? editingEntry.recipeRef?.recipeName
+          : editingEntry.foodRef?.foodName
+      }}
+    </p>
     <div class="col">
       <label>Timestamp</label>
       <input v-model="timestamp" type="datetime-local" />

@@ -3,7 +3,6 @@ import { ref, watch, computed } from 'vue'
 import { Heart, HeartOutline, SearchOutline } from '@vicons/ionicons5'
 import { useFoodsStore } from '@/stores/foods'
 import { useFavoritesStore } from '@/stores/favorites'
-import { useDatasetStore } from '@/stores/dataset'
 import type { Food, FoodType } from '@/types/domain'
 
 defineProps<{
@@ -17,7 +16,6 @@ const emit = defineEmits<{
 
 const foods = useFoodsStore()
 const favorites = useFavoritesStore()
-const dataset = useDatasetStore()
 
 const query = ref('')
 const typeFilter = ref<FoodType | ''>('')
@@ -35,24 +33,30 @@ let debounce: ReturnType<typeof setTimeout> | null = null
 watch(query, (q) => {
   if (debounce) clearTimeout(debounce)
   if (!q.trim()) {
-    foods.searchLocal('')
+    void foods.search('')
     return
   }
-  debounce = setTimeout(async () => {
-    await dataset.ensureChunkForQuery(q)
-    await foods.searchLocal(q, typeFilter.value || undefined)
+  debounce = setTimeout(() => {
+    void foods.search(q, typeFilter.value || undefined)
   }, 200)
 })
 
 watch(typeFilter, () => {
   if (query.value.trim()) {
-    foods.searchLocal(query.value, typeFilter.value || undefined)
+    void foods.search(query.value, typeFilter.value || undefined)
   }
 })
 
 function select(food: Food) {
   emit('update:modelValue', food)
   emit('select', food)
+}
+
+function servingLabel(food: Food): string {
+  if (food.servingCommon) {
+    return `${food.servingCommon.quantity} ${food.servingCommon.unit}`
+  }
+  return `${food.servingMetric.quantity} ${food.servingMetric.unit}`
 }
 
 const results = computed(() => foods.searchResults)
@@ -79,10 +83,13 @@ const results = computed(() => foods.searchResults)
       </n-tag>
     </div>
 
-    <div v-if="dataset.loadingChunk" class="row" style="margin-top: 8px">
+    <div v-if="foods.searching" class="row" style="margin-top: 8px">
       <n-spin :size="14" />
-      <small>Loading data chunk...</small>
+      <small>Searching…</small>
     </div>
+    <p v-else-if="foods.searchError" class="error" style="margin-top: 8px">
+      {{ foods.searchError }}
+    </p>
 
     <n-card
       v-for="food in results"
@@ -94,10 +101,15 @@ const results = computed(() => foods.searchResults)
       <div class="row">
         <div class="col">
           <strong>{{ food.name }}</strong>
-          <n-tag size="small">{{ food.type }}</n-tag>
+          <n-tag v-if="food.type" size="small">{{ food.type }}</n-tag>
         </div>
         <div class="col right-align">
-          <n-button quaternary circle size="small" @click.stop="favorites.toggle(food.id)">
+          <n-button
+            quaternary
+            circle
+            size="small"
+            @click.stop="favorites.toggle(food.id)"
+          >
             <template #icon>
               <n-icon :component="favorites.isFavorite(food.id) ? Heart : HeartOutline" />
             </template>
@@ -105,20 +117,23 @@ const results = computed(() => foods.searchResults)
         </div>
       </div>
       <div class="row" style="justify-content: space-between">
-        <table class="macro-table">
+        <table v-if="food.perServingMacros" class="macro-table">
           <tbody>
             <tr>
-              <th>kcal</th><th>P</th><th>C</th><th>F</th>
+              <th>kcal</th>
+              <th>P</th>
+              <th>C</th>
+              <th>F</th>
             </tr>
             <tr>
-              <td>{{ Math.round(food.nutrition100g.calories) }}</td>
-              <td>{{ Math.round(food.nutrition100g.protein) }}</td>
-              <td>{{ Math.round(food.nutrition100g.carbohydrates) }}</td>
-              <td>{{ Math.round(food.nutrition100g.total_fat) }}</td>
+              <td>{{ Math.round(food.perServingMacros.calories) }}</td>
+              <td>{{ Math.round(food.perServingMacros.protein) }}</td>
+              <td>{{ Math.round(food.perServingMacros.carbs) }}</td>
+              <td>{{ Math.round(food.perServingMacros.fat) }}</td>
             </tr>
           </tbody>
         </table>
-        <small>per 100{{ food.servingMetric.unit }}</small>
+        <small>per serving · {{ servingLabel(food) }}</small>
       </div>
     </n-card>
   </div>

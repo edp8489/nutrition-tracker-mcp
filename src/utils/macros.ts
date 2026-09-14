@@ -1,15 +1,15 @@
 import type { Macros, Nutrition100g, Unit } from '@/types/domain'
 
 export function foodMacrosForQuantity(
-  nutrition100g: Nutrition100g,
+  nutrition100g: Nutrition100g | null | undefined,
   quantity: number,
 ): Macros {
   const factor = quantity / 100
   return {
-    calories: round2(nutrition100g.calories * factor),
-    protein: round2(nutrition100g.protein * factor),
-    carbs: round2(nutrition100g.carbohydrates * factor),
-    fat: round2(nutrition100g.total_fat * factor),
+    calories: round2((nutrition100g?.calories ?? 0) * factor),
+    protein: round2((nutrition100g?.protein ?? 0) * factor),
+    carbs: round2((nutrition100g?.carbohydrates ?? 0) * factor),
+    fat: round2((nutrition100g?.total_fat ?? 0) * factor),
   }
 }
 

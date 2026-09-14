@@ -4,9 +4,9 @@ import { ref, computed } from 'vue'
 import { db } from '@/db/dexie'
 import { foodMacrosForQuantity, multiplyMacros } from '@/utils/macros'
 import { uuid } from '@/utils/uuid'
-import { useFoodsStore } from './foods'
 import { useRecipesStore } from './recipes'
 import type {
+  Food,
   LogEntry,
   Macros,
   Unit,
@@ -32,8 +32,8 @@ export const useLogStore = defineStore('log', () => {
       groups[date].push(e)
     }
     // sort dates desc
-    const sorted: Array<[string, LogEntry[]]> = Object.entries(groups).sort(
-      (a, b) => b[0].localeCompare(a[0]),
+    const sorted: Array<[string, LogEntry[]]> = Object.entries(groups).sort((a, b) =>
+      b[0].localeCompare(a[0]),
     )
     // within each date, sort by hour asc
     for (const [, list] of sorted) {
@@ -43,9 +43,7 @@ export const useLogStore = defineStore('log', () => {
   })
 
   function dayTotal(date: string): Macros {
-    const dayEntries = entries.value.filter(
-      (e) => e.timestamp.slice(0, 10) === date,
-    )
+    const dayEntries = entries.value.filter((e) => e.timestamp.slice(0, 10) === date)
     const total = { calories: 0, protein: 0, carbs: 0, fat: 0 }
     for (const e of dayEntries) {
       total.calories += e.snapshotMacros.calories
@@ -66,21 +64,19 @@ export const useLogStore = defineStore('log', () => {
   }
 
   async function addFoodLog(
-    foodId: string,
-    foodName: string,
+    food: Food,
     quantity: number,
     unit: Unit,
     timestamp: string,
   ): Promise<string> {
-    const foodsStore = useFoodsStore()
-    const food = await foodsStore.getFood(foodId)
-    if (!food) throw new Error(`Food not found: ${foodId}`)
-    const snapshotMacros = foodMacrosForQuantity(
-      food.nutrition100g,
-      quantity,
-    )
+    const snapshotMacros = foodMacrosForQuantity(food.nutrition100g, quantity)
     const id = uuid()
-    const foodRef: FoodLogRef = { foodId, foodName, quantity, unit }
+    const foodRef: FoodLogRef = {
+      foodId: food.id,
+      foodName: food.name,
+      quantity,
+      unit,
+    }
     const entry: LogEntry = {
       id,
       timestamp: roundToHour(timestamp),
@@ -90,7 +86,7 @@ export const useLogStore = defineStore('log', () => {
       createdAt: new Date().toISOString(),
     }
     await db.logEntries.add(entry)
-    await touchRecent(foodId)
+    await touchRecent(food.id)
     return id
   }
 
@@ -125,9 +121,7 @@ export const useLogStore = defineStore('log', () => {
     await db.logEntries.put({
       ...existing,
       ...changes,
-      timestamp: changes.timestamp
-        ? roundToHour(changes.timestamp)
-        : existing.timestamp,
+      timestamp: changes.timestamp ? roundToHour(changes.timestamp) : existing.timestamp,
     })
   }
 

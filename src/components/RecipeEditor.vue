@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { TrashOutline } from '@vicons/ionicons5'
 import { useRecipesStore } from '@/stores/recipes'
-import { useFoodsStore } from '@/stores/foods'
-import { foodMacrosForQuantity, sumMacros, divideMacros } from '@/utils/macros'
+import { computeRecipe } from '@/services/foodMcp'
 import type { Ingredient, Food, Unit, Macros } from '@/types/domain'
 import FoodSearch from './FoodSearch.vue'
 
@@ -16,7 +15,6 @@ const emit = defineEmits<{
 }>()
 
 const recipes = useRecipesStore()
-const foodsStore = useFoodsStore()
 
 const name = ref('')
 const portions = ref(1)
@@ -41,16 +39,35 @@ watch(
   { immediate: true },
 )
 
-const computedMacros = computed<Macros>(() => {
-  const list: Macros[] = []
-  for (const ing of ingredients.value) {
-    const food = foodsStore.searchResults.find((f) => f.id === ing.foodId)
-    if (food) {
-      list.push(foodMacrosForQuantity(food.nutrition100g, ing.quantity))
-    }
+const ZERO_MACROS: Macros = { calories: 0, protein: 0, carbs: 0, fat: 0 }
+
+// Per-portion preview is computed by the MCP tool (ADR-0020: all summation
+// happens server-side); debounced while ingredients/portions are edited.
+const previewMacros = ref<Macros>(ZERO_MACROS)
+const computing = ref(false)
+let computeDebounce: ReturnType<typeof setTimeout> | null = null
+
+function scheduleCompute() {
+  if (computeDebounce) clearTimeout(computeDebounce)
+  if (ingredients.value.length === 0) {
+    previewMacros.value = ZERO_MACROS
+    return
   }
-  return divideMacros(sumMacros(list), portions.value || 1)
-})
+  computeDebounce = setTimeout(async () => {
+    computing.value = true
+    try {
+      const r = await computeRecipe(ingredients.value, portions.value || 1)
+      previewMacros.value = r.perServingMacros ?? ZERO_MACROS
+    } catch {
+      previewMacros.value = ZERO_MACROS
+    } finally {
+      computing.value = false
+    }
+  }, 300)
+}
+
+watch(ingredients, scheduleCompute, { deep: true })
+watch(portions, scheduleCompute)
 
 function addIngredient(food: Food) {
   ingredients.value.push({
@@ -112,7 +129,10 @@ async function save() {
     <n-table :bordered="true" class="macro-table" style="margin-top: 8px">
       <thead>
         <tr>
-          <th>Ingredient</th><th>Qty</th><th>Unit</th><th></th>
+          <th>Ingredient</th>
+          <th>Qty</th>
+          <th>Unit</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -151,11 +171,14 @@ async function save() {
     <div class="row" style="margin-top: 8px">
       <div class="col">
         <h6>Per portion</h6>
-        <p>
-          {{ Math.round(computedMacros.calories) }} kcal ·
-          {{ Math.round(computedMacros.protein) }}g P ·
-          {{ Math.round(computedMacros.carbs) }}g C ·
-          {{ Math.round(computedMacros.fat) }}g F
+        <p v-if="computing">
+          <n-spin :size="14" />
+        </p>
+        <p v-else>
+          {{ Math.round(previewMacros.calories) }} kcal ·
+          {{ Math.round(previewMacros.protein) }}g P ·
+          {{ Math.round(previewMacros.carbs) }}g C · {{ Math.round(previewMacros.fat) }}g
+          F
         </p>
       </div>
     </div>

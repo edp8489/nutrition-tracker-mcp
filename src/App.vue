@@ -10,16 +10,18 @@ import {
   RestaurantOutline,
   SunnyOutline,
 } from '@vicons/ionicons5'
-import { useDatasetStore } from '@/stores/dataset'
 import { useTheme } from '@/composables/useTheme'
 
-const dataset = useDatasetStore()
 const router = useRouter()
 const { theme, isDark, toggle } = useTheme()
 
 onMounted(() => {
-  dataset.init()
-  if (!Capacitor.isNativePlatform() && import.meta.env.PROD && 'serviceWorker' in navigator) {
+  // Food data comes from the MCP server (ADR-0021) — no dataset fetches.
+  if (
+    !Capacitor.isNativePlatform() &&
+    import.meta.env.PROD &&
+    'serviceWorker' in navigator
+  ) {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {})
   }
 })

@@ -14,23 +14,32 @@ export interface Macros {
 }
 
 export interface Nutrition100g {
-  calories: number
-  protein: number
-  total_fat: number
-  carbohydrates: number
+  calories?: number
+  protein?: number
+  total_fat?: number
+  carbohydrates?: number
   dietary_fiber?: number
   total_sugars?: number
   ethyl_alcohol?: number
   [key: string]: number | undefined
 }
 
+/** Household serving anchor, e.g. { unit: 'cup', quantity: 1 } (ADR-0024). */
+export interface ServingCommon {
+  unit: string
+  quantity: number
+}
+
 export interface Food {
   id: string
   name: string
   altNames: string[]
-  type: FoodType
+  type: FoodType | null
   servingMetric: ServingMetric
-  nutrition100g: Nutrition100g
+  servingCommon?: ServingCommon | null
+  /** Present on search hits; full values only after getDetail(). */
+  perServingMacros?: Macros | null
+  nutrition100g?: Nutrition100g
   ean13?: string
   labels?: string[]
 }

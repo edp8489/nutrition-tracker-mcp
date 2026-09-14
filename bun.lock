@@ -6,6 +6,7 @@
       "name": "nutrition-tracker",
       "dependencies": {
         "@capacitor/core": "^8.5.1",
+        "@nutrition-tracker/shared": "workspace:*",
         "@vicons/ionicons5": "^0.13.0",
         "chart.js": "^4.4.0",
         "dexie": "^4.0.8",
