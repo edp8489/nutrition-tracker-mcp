@@ -1,0 +1,43 @@
+# Example Compose for the nutrition-tracker v1 deployment (personal app
+# variant, ADR-0021): one Bun process serving the MCP streamable-HTTP API
+# and the built web app.
+#
+# Endpoints once running:
+#   Web app:  http://<host>:3000/nutrition-tracker/
+#   MCP:      http://<host>:3000/mcp   (point your chat client here)
+#
+# One-time dataset prep (on any machine with Bun + the OpenNutrition TSV
+# in external/opennutrition-dataset-2025.1/):
+#   bun install
+#   bun run build:sqlite
+#   mkdir -p data && cp server/data/opennutrition.sqlite data/
+#   chmod 644 data/opennutrition.sqlite   # container reads as uid 1000
+#
+# Then:  docker compose up -d --build
+
+services:
+  nutrition-tracker-mcp:
+    build: .
+    # Or use a prebuilt image instead of building on the server:
+    # image: ghcr.io/<you>/nutrition-tracker:latest
+    container_name: nutrition-tracker-mcp
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Server binds 0.0.0.0; change the host-side port here if 3000 is taken
+      NUTRITION_PORT: "3000"
+      NUTRITION_DB_PATH: /app/server/data/opennutrition.sqlite
+    volumes:
+      # Server opens the DB readonly (server/db.ts), so :ro is safe
+      - ./data/opennutrition.sqlite:/app/server/data/opennutrition.sqlite:ro
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - "fetch('http://127.0.0.1:3000/nutrition-tracker/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

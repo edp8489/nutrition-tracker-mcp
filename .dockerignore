@@ -1,0 +1,20 @@
+# Keep the build context small: external/ (dataset TSV, 269MB), server/data
+# (SQLite DB, 407MB), node_modules and dist are all excluded — they are
+# gitignored artifacts, rebuilt inside the image or volume-mounted at runtime.
+
+.git
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
+server/data
+external
+data
+
+android
+docs
+.gstack
+.DS_Store
+*.log
