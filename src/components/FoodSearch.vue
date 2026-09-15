@@ -52,6 +52,13 @@ function select(food: Food) {
   emit('select', food)
 }
 
+/** Lets a parent reset the search box, e.g. after adding a hit to a list. */
+function clear() {
+  query.value = ''
+}
+
+defineExpose({ clear })
+
 function servingLabel(food: Food): string {
   if (food.servingCommon) {
     return `${food.servingCommon.quantity} ${food.servingCommon.unit}`

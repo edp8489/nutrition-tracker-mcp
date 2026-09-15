@@ -154,7 +154,23 @@ function dayTotalFor(date: string) {
 </script>
 
 <template>
-  <header><h5>Food Log</h5></header>
+  <header>
+    <h2>Food Log</h2>
+    <div class="row" style="justify-content: center">
+      <n-button size="small" @click="startAdd(focusDate, 'food')">
+        <template #icon>
+          <n-icon :component="AddOutline" />
+        </template>
+        Food
+      </n-button>
+      <n-button size="small" @click="startAdd(focusDate, 'recipe')">
+        <template #icon>
+          <n-icon :component="AddOutline" />
+        </template>
+        Recipe
+      </n-button>
+    </div>
+  </header>
 
   <n-card
     v-for="[date, dayEntries] in log.entriesByDate"

@@ -22,19 +22,21 @@ function closeEditor() {
 </script>
 
 <template>
-  <header><h5>Recipes</h5></header>
+  <header><h2>Recipes</h2></header>
 
-  <n-button type="primary" @click="newRecipe">
-    <template #icon>
-      <n-icon :component="AddOutline" />
-    </template>
-    New recipe
-  </n-button>
+  <div class="center-align" style="margin-top: 8px">
+    <n-button type="primary" @click="newRecipe">
+      <template #icon>
+        <n-icon :component="AddOutline" />
+      </template>
+      New recipe
+    </n-button>
+  </div>
 
   <n-card v-for="r in recipes.recipes" :key="r.id" style="margin-top: 8px">
     <div class="row">
       <div class="col">
-        <h6>{{ r.name }}</h6>
+        <h4>{{ r.name }}</h4>
         <small>{{ r.portions }} portions · {{ r.ingredients.length }} ingredients</small>
       </div>
       <div class="col right-align">

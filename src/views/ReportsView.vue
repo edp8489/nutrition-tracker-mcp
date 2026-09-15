@@ -71,7 +71,7 @@ function thisWeek() {
 </script>
 
 <template>
-  <header><h5>Reports</h5></header>
+  <header><h2>Reports</h2></header>
 
   <div class="row">
     <n-button quaternary circle @click="prevWeek">

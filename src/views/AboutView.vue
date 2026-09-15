@@ -1,7 +1,7 @@
 <script setup lang="ts"></script>
 
 <template>
-  <header><h5>About</h5></header>
+  <header><h2>About</h2></header>
 
   <n-card title="Nutrition Tracker">
     <p>A personal calorie and macro tracker. Uses the OpenNutrition dataset (v2025.1).</p>

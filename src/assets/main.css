@@ -1,6 +1,6 @@
-nav.bottom {
+nav.top {
   position: fixed;
-  bottom: 0;
+  top: 0;
   width: 100%;
   z-index: 10;
   display: flex;
@@ -13,11 +13,12 @@ nav.bottom {
 .nav-toggle {
   position: absolute;
   right: 8px;
-  top: -52px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 main {
-  padding-bottom: 80px;
+  padding-top: 80px;
 }
 
 .row {

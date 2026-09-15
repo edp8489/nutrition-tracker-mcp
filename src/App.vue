@@ -36,10 +36,8 @@ const navItems = [
 
 <template>
   <n-config-provider :theme="theme">
-    <main>
-      <router-view />
-    </main>
-    <nav class="bottom">
+    <n-global-style />
+    <nav class="top">
       <n-button
         v-for="item in navItems"
         :key="item.to"
@@ -63,5 +61,8 @@ const navItems = [
         </template>
       </n-button>
     </nav>
+    <main>
+      <router-view />
+    </main>
   </n-config-provider>
 </template>

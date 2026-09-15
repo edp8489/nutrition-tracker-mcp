@@ -1,6 +1,15 @@
 export type FoodType = 'everyday' | 'grocery' | 'prepared' | 'restaurant'
 export type Unit = 'g' | 'ml'
 
+/**
+ * Household measurement units accepted at the input boundary (ADR-0024).
+ * Never persisted — converted to a metric `Unit` before storage.
+ */
+export type HouseholdUnit = 'serving' | 'cup' | 'tbsp' | 'tsp'
+
+/** All units a measurement input accepts: metric storage + household input. */
+export type MeasureUnit = Unit | HouseholdUnit
+
 export interface ServingMetric {
   unit: Unit
   quantity: number
