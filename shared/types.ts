@@ -88,6 +88,8 @@ export interface ServedNutrient {
   value: number | null
   measured: boolean
   caveat?: string
+  /** Dataset-native unit (kcal, g, mg); omitted for keys without a known unit. */
+  unit?: string
 }
 
 // --- searchIngredient ------------------------------------------------------
@@ -160,6 +162,10 @@ export interface ComputeRecipeMacrosResult {
   servings: number
   totalMacros: Macros | null
   perServingMacros: Macros | null
+  /** Full-nutrition totals summed across ingredients (ADR-0026), measured keys only. */
+  totalNutrition: ServedNutrient[] | null
+  /** totalNutrition divided by servings. */
+  perServingNutrition: ServedNutrient[] | null
   ingredients: RecipeIngredientMacros[]
   caveats: string[]
   attribution: Attribution

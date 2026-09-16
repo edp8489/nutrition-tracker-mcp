@@ -121,15 +121,15 @@ TypeScript on **Bun** (no Node); `@modelcontextprotocol/sdk`; **streamable HTTP*
 - Recipe nutrition display: per-portion and total (× portions) for the 4 MVP macros.
 
 ### 6.3 Food log
-- Freeform list of entries, each with a loose hourly timestamp (date + hour 0–23). No fixed meal slots.
+- Freeform list of entries, each with a loose timestamp at 15-minute precision (date + HH:MM). No fixed meal slots.
 - Entry types:
   - **Food entry**: `{ foodId, foodName, quantity, unit, timestamp, snapshotMacros }`.
   - **Recipe entry**: `{ recipeId, recipeName, portions, timestamp, snapshotMacrosPerPortion }`.
-- Default timestamp = current hour; editable via `<input type="datetime-local">` rounded to hour.
+- Default timestamp = current time; editable via `<input type="datetime-local">`, rounded to nearest 15 minutes on save.
 - Default food quantity = `servingMetric.quantity` (common serving shown alongside); editable with the unit selector (ADR-0024); normalized to metric on save.
 - Snapshot = per-portion (food) or per-portion (recipe) macros frozen at log time. Immutable.
 - Free edit (quantity, timestamp) and delete of any past entry. Editing does not recompute snapshots.
-- Log view: entries grouped by date, most-recent-date first; within a day, entries by hour ascending. Inline edit + delete per entry. "Add entry" per date.
+- Log view: entries grouped by date, most-recent-date first; within a day, entries chronologically ascending. Inline edit + delete per entry. "Add entry" per date.
 
 ### 6.4 Reports
 - **Week view** (default): current Mon–Sun.
@@ -162,10 +162,10 @@ TypeScript on **Bun** (no Node); `@modelcontextprotocol/sdk`; **streamable HTTP*
 | US3 | create a recipe by adding ingredients (food + quantity + unit) and setting portion count | I can compute and save macros per portion             |
 | US4 | edit a recipe's ingredients or portion count                                             | I can adjust when I change how I cook it              |
 | US5 | delete a recipe                                                                          | I can remove ones I no longer use                     |
-| US6 | log a food entry at a loose hourly timestamp with a quantity (defaulting to its serving, in metric or household units) | I can record what I ate and when        |
+| US6 | log a food entry at a loose 15-minute timestamp with a quantity (defaulting to its serving, in metric or household units) | I can record what I ate and when        |
 | US7 | log a recipe entry as "N portions"                                                       | I can record meals cooked from my recipes             |
 | US8 | edit or delete any past log entry                                                        | I can correct mistakes                                |
-| US9 | view today's entries grouped by hour, with inline edit/delete                            | I can review and manage today's intake                |
+| US9 | view today's entries grouped by time, with inline edit/delete                            | I can review and manage today's intake                |
 | US10| view a week's macro breakdown as a stacked bar chart (Mon–Sun)                           | I can see trends in my intake                         |
 | US11| view a daily totals table for the week                                                   | I can read exact numbers                              |
 | US12| click a day in the chart to drill into that day's entries                                | I can inspect what made up a specific day             |
@@ -264,7 +264,7 @@ Projected row per ADR-0023 — **all 13 source TSV columns retained**:
 | Field           | Type     | Notes                                              |
 |-----------------|----------|----------------------------------------------------|
 | `id`            | string   | PK (uuid)                                          |
-| `timestamp`     | ISOString | Hour precision (date + hour 0–23)                 |
+| `timestamp`     | ISOString | 15-minute precision (date + HH:MM)                |
 | `kind`          | `'food'\|'recipe'` |                                          |
 | `foodRef`       | `{ foodId, foodName, quantity, unit }` | Present if kind=food; metric-normalized |
 | `recipeRef`     | `{ recipeId, recipeName, portions }` | Present if kind=recipe           |

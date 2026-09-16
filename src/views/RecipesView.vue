@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { AddOutline, CreateOutline, TrashOutline } from '@vicons/ionicons5'
+import { ref } from 'vue'
+import {
+  AddOutline,
+  CreateOutline,
+  DocumentTextOutline,
+  TrashOutline,
+} from '@vicons/ionicons5'
 import { useRecipesStore } from '@/stores/recipes'
 import RecipeEditor from '@/components/RecipeEditor.vue'
+import RecipeNutritionModal from '@/components/RecipeNutritionModal.vue'
 import AttributionFooter from '@/components/AttributionFooter.vue'
+import type { Recipe } from '@/types/domain'
 
 const recipes = useRecipesStore()
 const editing = ref<{ id: string | null; open: boolean }>({ id: null, open: false })
+const detailRecipe = ref<Recipe | null>(null)
 
 function newRecipe() {
   editing.value = { id: null, open: true }
@@ -18,6 +26,11 @@ function editRecipe(id: string) {
 
 function closeEditor() {
   editing.value = { id: null, open: false }
+}
+
+function showNutrition(id: string) {
+  const r = recipes.recipes.find((x) => x.id === id)
+  if (r) detailRecipe.value = r
 }
 </script>
 
@@ -46,6 +59,17 @@ function closeEditor() {
           {{ Math.round(r.perPortionMacros.carbs) }}g C ·
           {{ Math.round(r.perPortionMacros.fat) }}g F
         </p>
+        <n-button
+          quaternary
+          circle
+          size="small"
+          title="Nutrient breakdown"
+          @click="showNutrition(r.id)"
+        >
+          <template #icon>
+            <n-icon :component="DocumentTextOutline" />
+          </template>
+        </n-button>
         <n-button quaternary circle size="small" @click="editRecipe(r.id)">
           <template #icon>
             <n-icon :component="CreateOutline" />
@@ -64,10 +88,11 @@ function closeEditor() {
     No recipes yet. Create your first one.
   </p>
 
-  <RecipeEditor
-    v-if="editing.open"
-    :recipe-id="editing.id"
-    @close="closeEditor"
+  <RecipeEditor v-if="editing.open" :recipe-id="editing.id" @close="closeEditor" />
+  <RecipeNutritionModal
+    v-if="detailRecipe"
+    :recipe="detailRecipe"
+    @close="detailRecipe = null"
   />
   <AttributionFooter />
 </template>

@@ -146,7 +146,9 @@ function buildServer(repo: FoodRepository): McpServer {
         'Deterministic recipe macro computation — all summation happens here, ' +
         'never in the model. Each ingredient is normalized to metric (household ' +
         "units like cups use the food's dataset serving anchor), summed, and " +
-        'divided by servings.',
+        'divided by servings. Also returns a full per-key nutrient breakdown ' +
+        '(totalNutrition/perServingNutrition, measured fields only — unmeasured ' +
+        'zeros are never summed).',
       inputSchema: computeRecipeMacrosSchema,
     },
     toolHandler(computeRecipeMacros, repo),

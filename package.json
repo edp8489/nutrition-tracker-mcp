@@ -8,7 +8,7 @@
     "shared"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"bun run server\" \"vite --host ${VITE_DEV_HOST} \" ",
     "build": "vue-tsc --noEmit && vite build",
     "build:android": "vue-tsc --noEmit && vite build --base=/ && rm -rf dist/data/chunks && npx cap sync android",
     "build:dataset": "bun scripts/build-subset.mjs",
@@ -46,6 +46,7 @@
     "@vitejs/plugin-vue": "^5.1.0",
     "@vue/eslint-config-prettier": "^9.0.0",
     "@vue/eslint-config-typescript": "^13.0.0",
+    "concurrently": "^10.0.5",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.27.0",
     "jsdom": "^29.1.1",

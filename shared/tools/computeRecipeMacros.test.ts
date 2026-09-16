@@ -87,6 +87,52 @@ describe('computeRecipeMacros', () => {
     expect(result.caveats[0]).toContain('no nutrition data')
   })
 
+  it('sums full nutrition across ingredients with measured fields only', () => {
+    const result = computeRecipeMacros(
+      {
+        ingredients: [
+          { foodId: chicken.id, quantity: 100, unit: 'g' },
+          { foodId: rice.id, quantity: 100, unit: 'g' },
+        ],
+        servings: 2,
+      },
+      repo,
+    )
+    const row = (key: string) => result.totalNutrition!.find((r) => r.key === key)
+    expect(row('calories')?.value).toBe(295)
+    expect(row('carbohydrates')?.value).toBe(28)
+    expect(row('sodium')?.value).toBe(74)
+    expect(row('sodium')?.unit).toBe('mg')
+    // out-of-tier zeros are unmeasured — never summed (ADR-0023)
+    expect(row('caffeine')).toBeUndefined()
+    expect(row('biotin')).toBeUndefined()
+    // sodium/fiber/sugars come from chicken only → partial-coverage caveat
+    expect(
+      result.caveats.some((c) => c.includes('not reported by every ingredient')),
+    ).toBe(true)
+  })
+
+  it('divides full nutrition by servings', () => {
+    const result = computeRecipeMacros(
+      { ingredients: [{ foodId: chicken.id, quantity: 100, unit: 'g' }], servings: 2 },
+      repo,
+    )
+    const per = result.perServingNutrition!
+    expect(per.find((r) => r.key === 'sodium')?.value).toBe(37)
+    expect(per.find((r) => r.key === 'calories')?.value).toBe(82.5)
+  })
+
+  it('returns null nutrition alongside null macros when no ingredient has data', () => {
+    const noNutrition = { ...chicken, nutrition100g: null }
+    const repo2 = repoFor({ noNutrition })
+    const result = computeRecipeMacros(
+      { ingredients: [{ foodId: 'noNutrition', quantity: 100, unit: 'g' }], servings: 1 },
+      repo2,
+    )
+    expect(result.totalNutrition).toBeNull()
+    expect(result.perServingNutrition).toBeNull()
+  })
+
   it('rejects empty ingredient lists and non-positive servings', () => {
     expect(() => computeRecipeMacros({ ingredients: [], servings: 1 }, repo)).toThrow(
       /at least one/,

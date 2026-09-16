@@ -66,6 +66,8 @@ export interface Recipe {
   ingredients: Ingredient[]
   portions: number
   perPortionMacros: Macros
+  /** Full measured nutrient breakdown per portion (ADR-0026); absent on legacy recipes. */
+  perPortionNutrition?: Nutrition100g
   createdAt: string
   updatedAt: string
 }
@@ -92,6 +94,13 @@ export interface LogEntry {
   foodRef?: FoodLogRef
   recipeRef?: RecipeLogRef
   snapshotMacros: Macros
+  /** Freeform note, e.g. how the meal made you feel later. */
+  note?: string
+  /**
+   * Frozen full-nutrition snapshot at log time (ADR-0005/0026). Only the
+   * four macros were frozen before ADR-0026 — legacy entries lack this.
+   */
+  snapshotNutrition?: Nutrition100g
   createdAt: string
 }
 

@@ -6,6 +6,7 @@ import { useLogStore } from '@/stores/log'
 import { useRecipesStore } from '@/stores/recipes'
 import { useFoodsStore } from '@/stores/foods'
 import { foodMacrosForQuantity } from '@/utils/macros'
+import { localDateOf } from '@/utils/dates'
 import LogEntryComp from '@/components/LogEntry.vue'
 import FoodSearch from '@/components/FoodSearch.vue'
 import AttributionFooter from '@/components/AttributionFooter.vue'
@@ -17,7 +18,7 @@ const foodsStore = useFoodsStore()
 const route = useRoute()
 const router = useRouter()
 
-const today = new Date().toISOString().slice(0, 10)
+const today = localDateOf(new Date().toISOString())
 const addingForDate = ref<string | null>(null)
 const addMode = ref<'food' | 'recipe' | null>(null)
 const selectedFood = ref<Food | null>(null)
@@ -26,9 +27,11 @@ const unit = ref<Unit>('g')
 const timestamp = ref('')
 const selectedRecipeId = ref<string | null>(null)
 const portions = ref(1)
+const noteDraft = ref('')
 const editingEntry = ref<LogEntry | null>(null)
 const loadingDetail = ref(false)
 const detailError = ref(false)
+const searchRef = ref<InstanceType<typeof FoodSearch> | null>(null)
 
 const focusDate = ref<string>((route.query.date as string) || today)
 
@@ -45,9 +48,7 @@ const recipeOptions = computed(() =>
 )
 
 onMounted(async () => {
-  const now = new Date()
-  now.setMinutes(0, 0, 0)
-  timestamp.value = now.toISOString().slice(0, 16)
+  timestamp.value = currentHourInputValue()
 })
 
 watch(
@@ -60,9 +61,8 @@ watch(
 function startAdd(date: string, mode: 'food' | 'recipe') {
   addingForDate.value = date
   addMode.value = mode
-  const now = new Date()
-  now.setMinutes(0, 0, 0)
-  timestamp.value = now.toISOString().slice(0, 16)
+  timestamp.value = currentHourInputValue()
+  noteDraft.value = ''
   if (mode === 'recipe') {
     selectedRecipeId.value = null
     portions.value = 1
@@ -85,6 +85,7 @@ async function onFoodSelect(food: Food) {
   if (selectedFood.value) {
     quantity.value = selectedFood.value.servingMetric.quantity
     unit.value = selectedFood.value.servingMetric.unit
+    searchRef.value?.clear()
   }
 }
 
@@ -95,6 +96,7 @@ async function saveFoodEntry() {
     quantity.value,
     unit.value,
     new Date(timestamp.value).toISOString(),
+    noteDraft.value,
   )
   cancelAdd()
 }
@@ -109,6 +111,8 @@ async function saveRecipeEntry() {
     portions.value,
     r.perPortionMacros,
     new Date(timestamp.value).toISOString(),
+    r.perPortionNutrition,
+    noteDraft.value,
   )
   cancelAdd()
 }
@@ -119,22 +123,38 @@ function cancelAdd() {
   selectedFood.value = null
   selectedRecipeId.value = null
   quantity.value = 0
+  noteDraft.value = ''
 }
 
 async function deleteEntry(id: string) {
   await log.deleteEntry(id)
 }
 
+function currentHourInputValue(): string {
+  const now = new Date()
+  now.setMinutes(Math.round(now.getMinutes() / 15) * 15, 0, 0)
+  return toLocalInputValue(now.toISOString())
+}
+
+function toLocalInputValue(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${localDateOf(iso)}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function editEntry(id: string) {
   const entry = log.entries.find((e) => e.id === id)
   if (!entry) return
   editingEntry.value = entry
+  timestamp.value = toLocalInputValue(entry.timestamp)
+  noteDraft.value = entry.note ?? ''
 }
 
 async function saveEdit() {
   if (!editingEntry.value) return
   await log.updateEntry(editingEntry.value.id, {
     timestamp: new Date(timestamp.value).toISOString(),
+    note: noteDraft.value,
   })
   editingEntry.value = null
 }
@@ -208,7 +228,7 @@ function dayTotalFor(date: string) {
     <n-table striped :bordered="true" class="macro-table">
       <thead>
         <tr>
-          <th>Hour</th>
+          <th>Time</th>
           <th>Item</th>
           <th>kcal</th>
           <th>P</th>
@@ -246,12 +266,21 @@ function dayTotalFor(date: string) {
     "
   >
     <div class="col" style="margin-bottom: 8px">
-      <label>Timestamp (hour)</label>
-      <input v-model="timestamp" type="datetime-local" />
+      <label>Timestamp</label>
+      <input v-model="timestamp" type="datetime-local" step="300" />
+    </div>
+    <div class="col" style="margin-bottom: 8px">
+      <label>Note (optional)</label>
+      <n-input
+        v-model:value="noteDraft"
+        type="textarea"
+        :rows="2"
+        placeholder="e.g. stomach felt upset an hour later"
+      />
     </div>
 
     <div v-if="addMode === 'food'">
-      <FoodSearch @select="onFoodSelect" />
+      <FoodSearch ref="searchRef" @select="onFoodSelect" />
       <div v-if="loadingDetail" class="row" style="margin-top: 8px">
         <n-spin :size="14" />
         <small>Loading macros…</small>
@@ -353,7 +382,16 @@ function dayTotalFor(date: string) {
     </p>
     <div class="col">
       <label>Timestamp</label>
-      <input v-model="timestamp" type="datetime-local" />
+      <input v-model="timestamp" type="datetime-local" step="300" />
+    </div>
+    <div class="col" style="margin-top: 8px">
+      <label>Note</label>
+      <n-input
+        v-model:value="noteDraft"
+        type="textarea"
+        :rows="2"
+        placeholder="e.g. stomach felt upset an hour later"
+      />
     </div>
     <template #footer>
       <div class="row" style="justify-content: flex-end">

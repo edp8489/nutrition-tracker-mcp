@@ -14,7 +14,7 @@ const emit = defineEmits<{
 
 const hourLabel = computed(() => {
   const d = new Date(props.entry.timestamp)
-  return `${String(d.getHours()).padStart(2, '0')}:00`
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 })
 
 const title = computed(() => {
@@ -33,7 +33,12 @@ const m = computed(() => props.entry.snapshotMacros)
 <template>
   <tr>
     <td>{{ hourLabel }}</td>
-    <td>{{ title }}</td>
+    <td>
+      {{ title }}
+      <small v-if="entry.note" class="entry-note" :title="entry.note">{{
+        entry.note
+      }}</small>
+    </td>
     <td>{{ Math.round(m.calories) }}</td>
     <td>{{ Math.round(m.protein) }}</td>
     <td>{{ Math.round(m.carbs) }}</td>

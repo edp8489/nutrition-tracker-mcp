@@ -8,11 +8,19 @@
 import type { FoodRepository } from '../adapter'
 import { ATTRIBUTION } from '../attribution'
 import { divideMacros, macrosForQuantity, round2, sumMacros } from '../macros'
+import {
+  collectMeasuredNutrition,
+  divideNutrition,
+  nutritionForQuantity,
+  servedNutrients,
+  sumNutrition,
+} from '../nutrition'
 import { toMetric } from '../units'
 import type {
   ComputeRecipeMacrosParams,
   ComputeRecipeMacrosResult,
   Macros,
+  Nutrition100g,
   RecipeIngredientMacros,
 } from '../types'
 
@@ -30,6 +38,7 @@ export function computeRecipeMacros(
   const caveats: string[] = []
   const parts: RecipeIngredientMacros[] = []
   const macrosList: Macros[] = []
+  const measuredBlobs: Nutrition100g[] = []
 
   for (const ing of params.ingredients) {
     const food = repo.getFoodById(ing.foodId)
@@ -65,6 +74,11 @@ export function computeRecipeMacros(
       caveats.push(`${food.name}: no nutrition data reported — excluded from totals`)
     } else {
       macrosList.push(macros)
+      const scaled = nutritionForQuantity(
+        collectMeasuredNutrition(food.nutrition100g),
+        conv.quantity,
+      )
+      if (scaled) measuredBlobs.push(scaled)
     }
     parts.push({
       foodId: ing.foodId,
@@ -77,10 +91,27 @@ export function computeRecipeMacros(
   }
 
   const totalMacros = macrosList.length > 0 ? sumMacros(macrosList) : null
+  const { total: summedNutrition, contributors } = sumNutrition(measuredBlobs)
+  const hasNutrition = measuredBlobs.length > 0
+  if (hasNutrition) {
+    const partial = Object.entries(contributors).filter(
+      ([, count]) => count > 0 && count < measuredBlobs.length,
+    )
+    if (partial.length > 0) {
+      caveats.push(
+        `${partial.length} nutrient field(s) not reported by every ingredient — ` +
+          'their totals cover reporting ingredients only',
+      )
+    }
+  }
   return {
     servings: params.servings,
     totalMacros,
     perServingMacros: totalMacros ? divideMacros(totalMacros, params.servings) : null,
+    totalNutrition: hasNutrition ? servedNutrients(summedNutrition) : null,
+    perServingNutrition: hasNutrition
+      ? servedNutrients(divideNutrition(summedNutrition, params.servings))
+      : null,
     ingredients: parts,
     caveats,
     attribution: ATTRIBUTION,
