@@ -1,4 +1,6 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+
+</script>
 
 <template>
   <header><h2>About</h2></header>
@@ -6,7 +8,21 @@
   <n-card title="Nutrition Tracker">
     <p>A personal calorie and macro tracker. Uses the OpenNutrition dataset (v2025.1).</p>
 
-    <h6>Data attribution</h6>
+    <h4>Links</h4>
+    <p>
+      Project GitHub: 
+      <a href="https://github.com/edp8489/nutrition-tracker-mcp">edp8489/nutrition-tracker-mcp</a>
+    </p>
+    <p>
+     Homepage:
+      <a href="https://www.epeters.io" target="_blank" rel="noopener">epeters.io</a>.
+    </p>
+    <p>
+      Enjoy the app? Support development via
+      <a href="https://buymeacoffee.com/epetersio" target="_blank" rel="noopener">BuyMeACoffee</a>.
+    </p>
+
+    <h4>Data attribution</h4>
     <p>
       Food data provided by
       <a href="https://www.opennutrition.app" target="_blank" rel="noopener">OpenNutrition</a>
@@ -21,16 +37,16 @@
       contributors, licensed under ODbL.
     </p>
 
-    <h6>License</h6>
+    <h4>License</h4>
+    <p>MIT</p>
     <p>
       The dataset extract stored in this application is a derivative database under ODbL.
       Attribution is displayed on every view that shows dataset-derived data.
     </p>
 
-    <h6>Tech</h6>
+    <h4>Tech</h4>
     <p>
-      Vue 3 + TypeScript + Vite · Naive UI · Pinia · Vue Router · Dexie (IndexedDB) · Chart.js ·
-      Capacitor (Android)
+      Vue 3 + TypeScript + Vite · Naive UI · Pinia · Vue Router · Dexie (IndexedDB) · Chart.js 
     </p>
   </n-card>
 </template>
