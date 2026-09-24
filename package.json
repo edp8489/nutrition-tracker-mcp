@@ -1,6 +1,9 @@
 {
-  "name": "nutrition-tracker",
-  "version": "0.1.0",
+  "name": "nutrition-tracker-mcp",
+  "description":"Nutrition tracker and MCP server base don OpenNutrition dataset.",
+  "license": "See LICENSE.md",
+  "author": "Eric Peters <contact@epeters.io> (https://www.epeters.io)",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -8,9 +11,8 @@
     "shared"
   ],
   "scripts": {
-    "dev": "concurrently \"bun run server\" \"vite --host ${VITE_DEV_HOST} \" ",
+    "dev": "concurrently \"bun run server\" \"vite --host ${VITE_DEV_HOST:-localhost} \" ",
     "build": "vue-tsc --noEmit && vite build",
-    "build:android": "vue-tsc --noEmit && vite build --base=/ && rm -rf dist/data/chunks && npx cap sync android",
     "build:dataset": "bun scripts/build-subset.mjs",
     "build:sqlite": "bun scripts/build-sqlite.mjs",
     "preview": "vite preview",
@@ -37,8 +39,6 @@
     "vue-router": "^4.4.0"
   },
   "devDependencies": {
-    "@capacitor/android": "^8.5.1",
-    "@capacitor/cli": "^8.5.1",
     "@types/node": "^26.3.0",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",

@@ -34,7 +34,7 @@ The TSV is gitignored — obtain the OpenNutrition dataset release first and pla
 mkdir -p data && cp external/opennutrition-dataset-2025.1/opennutrition.sqlite data/
 ```
 
-4. Start the container:
+5. Start the container:
 
 `docker compose up -d --build`
 
@@ -42,11 +42,7 @@ mkdir -p data && cp external/opennutrition-dataset-2025.1/opennutrition.sqlite d
 - MCP endpoint: `http://<host>:3000/mcp` — point your chat client (Claude Desktop, OpenWebUI, etc.) at this URL
 
 ## License
-This app uses the OpenNutrition Dataset, which is made available under the Open Database License: http://opendatacommons.org/licenses/odbl/1.0/. 
+See LICENSE.md
 
-Any rights in individual contents of the database are licensed under a modified version of the Database Contents License:  
-http://opendatacommons.org/licenses/dbcl/1.0/.
-
-Portions of the OpenNutrition dataset incorporate data from Open Food Facts.  
-(c) Open Food Facts contributors. 
-https://world.openfoodfacts.org/terms-of-use
+## Contributing
+See CONTRIBUTING.md
