@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { Capacitor } from '@capacitor/core'
 import {
   BarChartOutline,
+  CloudDownloadOutline,
   CreateOutline,
   InformationCircleOutline,
   MoonOutline,
@@ -30,6 +31,7 @@ const navItems = [
   { to: '/recipes', label: 'Recipes', icon: RestaurantOutline },
   { to: '/log', label: 'Log', icon: CreateOutline },
   { to: '/reports', label: 'Reports', icon: BarChartOutline },
+  { to: '/backup', label: 'Backup', icon: CloudDownloadOutline },
   { to: '/about', label: 'About', icon: InformationCircleOutline },
 ]
 </script>

@@ -11,6 +11,7 @@ Tools exposed to your LLM client:
 - `computeRecipeMacros` — deterministic macro summation for a recipe
 - `filterFoods` — nutrient ranges and dietary presets (keto, high-protein, …)
 - `convertUnits` — unit conversion, food-aware where possible
+- `getServerRecipes` — returns every recipe from the server's `recipes/` directory (one JSON file per recipe), validated against the export envelope; invalid files are skipped and reported. Directory is read fresh on each call, so newly added files appear without a restart.
 
 All arithmetic happens server-side, so the model never does math or invents nutrition data. Single-user by design: logs, recipes, and favorites live in your browser's IndexedDB and never leave your machine.
 
@@ -24,22 +25,38 @@ Requirements: [Bun](https://bun.sh) and Docker (for server deployment only).
 
 3. (First run only) Install dependencies and create OpenNutrition.sqlite database
 
-`bun install && bun run build:sqlite external/opennutrition-dataset-2025.1/opennutrition_foods.tsv`
+    `bun install && bun run build:sqlite external/opennutrition-dataset-2025.1/opennutrition_foods.tsv`
 
-The TSV is gitignored — obtain the OpenNutrition dataset release first and place it at that path. The build writes `opennutrition.sqlite` next to the TSV.
+    The TSV is gitignored — obtain the OpenNutrition dataset release first and place it at that path. The build writes `opennutrition.sqlite` next to the TSV.
 
-4. Copy the database next to `docker-compose.yml` or adjust the bind mount path if you keep it elsewhere:
+    Recommended organization:
 
-```
-mkdir -p data && cp external/opennutrition-dataset-2025.1/opennutrition.sqlite data/
-```
+    ```
+    mkdir -p data/recipes
+
+    mv external/opennutrition-dataset-YYYY.MM/opennutrition.sqlite data/
+    ```
 
 5. Start the container:
 
-`docker compose up -d --build`
+4. **Dev Server (Vite)** Copy or symlink database to `server/data/` and recipes folder to `server/recipes`
 
-- Web app: `http://<host>:3000/nutrition-tracker/`
-- MCP endpoint: `http://<host>:3000/mcp` — point your chat client (Claude Desktop, OpenWebUI, etc.) at this URL
+5. **Docker Deploy** Adjust the bind mount paths in `docker-compose.yml`:
+
+    ```
+    ...
+    volumes:
+    - "./data/opennutrition.sqlite:app/server/data/opennutrition.sqlite:ro"
+    - "./data/recipes:/app/server/recipes:ro"
+    ...
+    ```
+
+
+6. **Docker** Start the container: `docker compose up -d --build`
+
+Web app: `http://<host>:3000/nutrition-tracker/`
+
+MCP endpoint: `http://<host>:3000/mcp` — point your chat client (Claude Desktop, OpenWebUI, etc.) at this URL
 
 ## License
 See LICENSE.md

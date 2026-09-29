@@ -77,6 +77,9 @@ export const filterFoodsSchema = {
   limit: z.number().int().min(1).max(50).optional().describe('Max results (default 10)'),
 }
 
+/** getServerRecipes takes no arguments (ADR-0028). */
+export const getServerRecipesSchema = {}
+
 export const convertUnitsSchema = {
   quantity: z.number().positive(),
   from: z

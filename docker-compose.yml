@@ -13,6 +13,11 @@
 #   mkdir -p data && cp server/data/opennutrition.sqlite data/
 #   chmod 644 data/opennutrition.sqlite   # container reads as uid 1000
 #
+# Optional server-level recipes (ADR-0028): drop export files (one recipe per
+# file, e.g. breakfast-smoothie.json) into ./recipes — every app user gets
+# them via the getServerRecipes MCP tool, read-only:
+#   mkdir -p recipes
+#
 # Then:  docker compose up -d --build
 
 services:
@@ -31,6 +36,8 @@ services:
     volumes:
       # Server opens the DB readonly (server/db.ts), so :ro is safe
       - ./data/opennutrition.sqlite:/app/server/data/opennutrition.sqlite:ro
+      # Server-level recipes (ADR-0028): read-only; app users import copies
+      - ./recipes:/app/server/recipes:ro
     healthcheck:
       test:
         - CMD

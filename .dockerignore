@@ -10,6 +10,7 @@
 node_modules
 dist
 server/data
+server/recipes
 external
 data
 

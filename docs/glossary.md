@@ -19,7 +19,7 @@
 | Hour        | Loose timestamp precision: date + hour-of-day (0–23). Minutes/seconds not captured.                 |
 | Naive UI    | Vue 3 component library replacing BeerCSS (ADR-0018). Light theme default; dark toggle in preferences. |
 | Capacitor   | Native runtime wrapping the web build as an Android app (ADR-0019). Hosts the embedded MCP tool library and on-device SQLite (ADR-0022). |
-| Data Island | An independent per-install data store (IndexedDB). Intentional by design (ADR-0009, ADR-0021): no sync planned; recipe import/export (v2) is the only bridge. |
+| Data Island | An independent per-install data store (IndexedDB). Intentional by design (ADR-0009, ADR-0021): no background sync; export/import (ADR-0027) and one-shot sync sessions (ADR-0029) are the only bridges. |
 | F-Droid     | FOSS Android app repository. Possible future distribution channel pending app-code licensing.        |
 | MCP         | Model Context Protocol — open protocol connecting LLM applications to tools and data. The server exposes typed tools; a host LLM calls them. |
 | MCP Server  | The TypeScript-on-Bun process (ADR-0020) exposing nutrition tools via streamable HTTP / stdio. Also serves the personal web app's static build. Stateless v1 — no user data. |
@@ -33,3 +33,8 @@
 | Hybrid Search | BM25 keyword search plus (phase 2) local open-weights embeddings, merged. v1 ships FTS5 BM25 only (ADR-0025). |
 | Data-Grounded Statement | An answer stating only what dataset fields support, with caveats/disclaimers; the required phrasing style for MCP answers and dietary filtering (ADR-0020). |
 | Bun         | JavaScript runtime used across the project (no Node): web tooling, the MCP server process, and workspaces (ADR-0020). |
+| Export File | JSON document with `nutrition-tracker` envelope (format, version, exportedAt, recipes, logEntries) — the single serialization format for import, LLM attach, server-recipe dirs, and sync payloads (ADR-0027). |
+| Server Recipes | Recipes placed in the host's read-only `./recipes` bind mount, one file per recipe, served to all app instances via the `getServerRecipes` MCP tool. Read-only; imported into personal recipes by copy with a new uuid (ADR-0028). |
+| Merge        | The single conflict-resolution function in `shared/serialization/`: recipes by-id last-write-wins on `updatedAt`; log entries insert-if-absent (immutable events); invalid items rejected with per-item error report (ADR-0027). |
+| Backup Adapter | Seam for backup destinations: `listBackups()` / `saveBackup()` / `restoreBackup()`. Adapters: local download (v1.1), Dropbox + Google Drive (v1.x), OneDrive deferred. Frontend-only OAuth — no credentials on any server (ADR-0030). |
+| Sync Session | One-shot full-state merge between two devices over WebRTC/PeerJS, payload = export format. Continuous sync permanently rejected (ADR-0029). |

@@ -11,6 +11,7 @@
  *
  * Env (see .env.example; Bun auto-loads .env):
  *   NUTRITION_DB_PATH  path to opennutrition.sqlite (default server/data/)
+ *   NUTRITION_RECIPES_PATH  server-recipes dir (default server/recipes, ADR-0028)
  *   NUTRITION_PORT    HTTP port (default 3000)
  */
 
@@ -26,6 +27,8 @@ import {
   filterFoodsSchema,
   getIngredientMacros,
   getIngredientMacrosSchema,
+  getServerRecipes,
+  getServerRecipesSchema,
   searchIngredient,
   searchIngredientSchema,
   type FoodRepository,
@@ -37,6 +40,8 @@ import { BunSqliteRepository } from './db'
 const DB_PATH = resolve(
   process.env.NUTRITION_DB_PATH ?? 'server/data/opennutrition.sqlite',
 )
+/** Server-recipes dir (ADR-0028): read-only bind mount, fresh read per call. */
+const RECIPES_PATH = resolve(process.env.NUTRITION_RECIPES_PATH ?? 'server/recipes')
 const PORT = Number(process.env.NUTRITION_PORT ?? 3000)
 
 const DIST = resolve('dist')
@@ -176,6 +181,20 @@ function buildServer(repo: FoodRepository): McpServer {
       inputSchema: convertUnitsSchema,
     },
     toolHandler(convertUnits, repo),
+  )
+
+  server.registerTool(
+    'getServerRecipes',
+    {
+      description:
+        'All server-level recipes (ADR-0028): every *.json export file in the ' +
+        "server's recipes bind mount, validated against the export envelope " +
+        '(ADR-0027) and merged into one array. Read fresh per call — newly ' +
+        'dropped files appear without a server restart. Invalid files are ' +
+        'skipped and reported in caveats. Takes no arguments.',
+      inputSchema: getServerRecipesSchema,
+    },
+    toolHandler(() => getServerRecipes(RECIPES_PATH), repo),
   )
 
   return server
