@@ -96,12 +96,33 @@ export const useRecipesStore = defineStore('recipes', () => {
     await db.recipes.delete(id)
   }
 
+  /**
+   * Clones a recipe under a new id with a "(copy)" name suffix, reusing the
+   * stored macros/nutrition (no MCP recompute). Returns the new id, or null
+   * when the source recipe no longer exists.
+   */
+  async function duplicateRecipe(id: string): Promise<string | null> {
+    const existing = await db.recipes.get(id)
+    if (!existing) return null
+    const now = new Date().toISOString()
+    const newId = uuid()
+    await db.recipes.add({
+      ...existing,
+      id: newId,
+      name: `${existing.name} (copy)`,
+      createdAt: now,
+      updatedAt: now,
+    })
+    return newId
+  }
+
   return {
     recipes: sortedRecipes,
     editing,
     createRecipe,
     updateRecipe,
     deleteRecipe,
+    duplicateRecipe,
     computePerPortion,
   }
 })

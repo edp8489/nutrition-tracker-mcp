@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { TrashOutline } from '@vicons/ionicons5'
 import { useRecipesStore } from '@/stores/recipes'
 import { useFoodsStore } from '@/stores/foods'
+import { db } from '@/db/dexie'
 import { computeRecipe } from '@/services/foodMcp'
 import { supportedHouseholdUnits, toMetricAmount } from '@/utils/measure'
 import type { Ingredient, Food, MeasureUnit, Macros } from '@/types/domain'
@@ -22,13 +23,26 @@ const foodsStore = useFoodsStore()
 /**
  * Editor draft rows carry household units (ADR-0024); they are converted
  * to metric `Ingredient`s on save and for the server-side preview.
+ * A draft row is either a food or an embedded saved recipe (ADR-0031);
+ * recipe rows are flattened into their food ingredients on save.
  */
-interface DraftIngredient {
+interface DraftFoodIngredient {
+  kind: 'food'
   foodId: string
   foodName: string
   quantity: number
   unit: MeasureUnit
 }
+
+/** Embedded recipe: `portions` is how many portions of the saved recipe. */
+interface DraftRecipeIngredient {
+  kind: 'recipe'
+  recipeId: string
+  recipeName: string
+  portions: number
+}
+
+type DraftIngredient = DraftFoodIngredient | DraftRecipeIngredient
 
 const UNIT_LABEL: Record<MeasureUnit, string> = {
   g: 'g',
@@ -50,13 +64,22 @@ watch(
   () => props.recipeId,
   async (id) => {
     if (!id) return
-    const r = await recipes.recipes.find((x) => x.id === id)
+    // liveQuery may lag one tick after a fresh write (e.g. duplicate → open)
+    // — fall back to a direct db read on store miss.
+    const r =
+      recipes.recipes.find((x) => x.id === id) ?? (await db.recipes.get(id))
     if (r) {
       name.value = r.name
       portions.value = r.portions
-      ingredients.value = [...r.ingredients]
+      ingredients.value = r.ingredients.map((i) => ({ kind: 'food' as const, ...i }))
       await Promise.all(
-        Array.from(new Set(ingredients.value.map((i) => i.foodId))).map(loadFoodAnchors),
+        Array.from(
+          new Set(
+            ingredients.value
+              .filter((i): i is DraftFoodIngredient => i.kind === 'food')
+              .map((i) => i.foodId),
+          ),
+        ).map(loadFoodAnchors),
       )
     }
   },
@@ -71,7 +94,9 @@ async function loadFoodAnchors(id: string): Promise<void> {
     foodsById.value[id] = cached
     return
   }
-  const known = ingredients.value.find((i) => i.foodId === id)
+  const known = ingredients.value.find(
+    (i): i is DraftFoodIngredient => i.kind === 'food' && i.foodId === id,
+  )
   try {
     foodsById.value[id] = await foodsStore.getDetail({
       id,
@@ -114,10 +139,28 @@ function scheduleCompute() {
   }, 300)
 }
 
-/** Draft rows → metric Ingredient[] (ADR-0024). null if a row can't convert. */
+/**
+ * Draft rows → metric Ingredient[] (ADR-0024). Recipe rows are flattened
+ * into their stored (metric) food ingredients × portions ratio (ADR-0031).
+ * null if a food row can't convert.
+ */
 function toStorageIngredients(): Ingredient[] | null {
   const out: Ingredient[] = []
   for (const row of ingredients.value) {
+    if (row.kind === 'recipe') {
+      const sub = recipes.recipes.find((x) => x.id === row.recipeId)
+      if (!sub) continue // recipe deleted mid-draft — skip its rows
+      const factor = row.portions / sub.portions
+      for (const ing of sub.ingredients) {
+        out.push({
+          foodId: ing.foodId,
+          foodName: ing.foodName,
+          quantity: Math.round(ing.quantity * factor * 100) / 100,
+          unit: ing.unit,
+        })
+      }
+      continue
+    }
     const r = toMetricAmount(row.quantity, row.unit, foodsById.value[row.foodId] ?? null)
     if (!r.ok) return null
     out.push({
@@ -130,7 +173,7 @@ function toStorageIngredients(): Ingredient[] | null {
   return out
 }
 
-function rowUnitOptions(row: DraftIngredient): Array<{ label: string; value: MeasureUnit }> {
+function rowUnitOptions(row: DraftFoodIngredient): Array<{ label: string; value: MeasureUnit }> {
   const food = foodsById.value[row.foodId]
   const units: MeasureUnit[] = ['g', 'ml', ...supportedHouseholdUnits(food)]
   return units.map((u) => ({ label: UNIT_LABEL[u], value: u }))
@@ -140,7 +183,7 @@ function rowUnitOptions(row: DraftIngredient): Array<{ label: string; value: Mea
  * Validation display: the converted metric mass shown alongside
  * household entries, e.g. "1.5 cup ≈ 306 g".
  */
-function rowMetricLabel(row: DraftIngredient): string | null {
+function rowMetricLabel(row: DraftFoodIngredient): string | null {
   if (row.unit === 'g' || row.unit === 'ml') return null
   const r = toMetricAmount(row.quantity, row.unit, foodsById.value[row.foodId] ?? null)
   if (!r.ok) return '?'
@@ -152,7 +195,7 @@ function rowMetricLabel(row: DraftIngredient): string | null {
 }
 
 /** Unit switch preserves the row's metric mass (51 g ↔ 1 serving ↔ 0.25 cup). */
-function onUnitChange(row: DraftIngredient, unit: MeasureUnit) {
+function onUnitChange(row: DraftFoodIngredient, unit: MeasureUnit) {
   const food = foodsById.value[row.foodId] ?? null
   const cur = toMetricAmount(row.quantity, row.unit, food)
   const perOne = toMetricAmount(1, unit, food)
@@ -168,12 +211,35 @@ watch(portions, scheduleCompute)
 function addIngredient(food: Food) {
   foodsById.value[food.id] = food
   ingredients.value.push({
+    kind: 'food',
     foodId: food.id,
     foodName: food.name,
     quantity: food.servingMetric.quantity,
     unit: food.servingMetric.unit,
   })
   searchRef.value?.clear()
+}
+
+/** Active add-method tab: Ingredient (food search) or Recipe (saved recipes). */
+const activeAddTab = ref<'ingredient' | 'recipe'>('ingredient')
+
+/** Saved recipes available for embedding — the edited recipe can't embed itself. */
+const recipeOptions = computed(() =>
+  recipes.recipes
+    .filter((r) => r.id !== props.recipeId)
+    .map((r) => ({ label: `${r.name} (${r.portions} portions)`, value: r.id })),
+)
+
+function addRecipeIngredient(recipeId: string | null) {
+  if (!recipeId) return
+  const r = recipes.recipes.find((x) => x.id === recipeId)
+  if (!r) return
+  ingredients.value.push({
+    kind: 'recipe',
+    recipeId: r.id,
+    recipeName: r.name,
+    portions: 1,
+  })
 }
 
 function removeIngredient(idx: number) {
@@ -217,10 +283,29 @@ async function save() {
       </n-input-number>
     </div>
 
-    <h6>Ingredients</h6>
-    <FoodSearch ref="searchRef" @select="addIngredient" />
+    <h4>Add Items</h4>
+    <n-tabs
+      v-model:value="activeAddTab"
+      type="segment"
+      size="small"
+      style="margin-top: 4px"
+    >
+      <n-tab-pane name="ingredient" tab="Ingredient">
+        <FoodSearch ref="searchRef" @select="addIngredient" />
+      </n-tab-pane>
+      <n-tab-pane name="recipe" tab="Recipe">
+        <n-select
+          :value="null"
+          filterable
+          clearable
+          placeholder="Add a saved recipe (flattened into ingredients on save)"
+          :options="recipeOptions"
+          @update:value="addRecipeIngredient"
+        />
+      </n-tab-pane>
+    </n-tabs>
 
-    <n-table :bordered="true" class="macro-table" style="margin-top: 8px">
+    <n-table :bordered="true" class="macro-table" style="margin-top: 16px">
       <thead>
         <tr>
           <th>Ingredient</th>
@@ -232,9 +317,13 @@ async function save() {
       </thead>
       <tbody>
         <tr v-for="(ing, idx) in ingredients" :key="idx">
-          <td>{{ ing.foodName }}</td>
+          <td v-if="ing.kind === 'food'">{{ ing.foodName }}</td>
+          <td v-else>
+            {{ ing.recipeName }} <n-tag size="small">recipe</n-tag>
+          </td>
           <td>
             <n-input-number
+              v-if="ing.kind === 'food'"
               :value="ing.quantity"
               :min="0"
               :step="1"
@@ -242,18 +331,31 @@ async function save() {
               style="width: 110px"
               @update:value="(v: number | null) => (ing.quantity = v ?? 0)"
             />
+            <n-input-number
+              v-else
+              :value="ing.portions"
+              :min="0.25"
+              :step="0.25"
+              size="small"
+              style="width: 110px"
+              @update:value="(v: number | null) => (ing.portions = v ?? 1)"
+            />
           </td>
           <td>
             <n-select
+              v-if="ing.kind === 'food'"
               :value="ing.unit"
               :options="rowUnitOptions(ing)"
               size="small"
               style="width: 110px"
               @update:value="(v: MeasureUnit) => onUnitChange(ing, v)"
             />
+            <span v-else>{{ ing.portions === 1 ? 'portion' : 'portions' }}</span>
           </td>
           <td>
-            <small v-if="rowMetricLabel(ing)">{{ rowMetricLabel(ing) }}</small>
+            <small v-if="ing.kind === 'food' && rowMetricLabel(ing)">
+              {{ rowMetricLabel(ing) }}
+            </small>
           </td>
           <td>
             <n-button quaternary circle size="small" @click="removeIngredient(idx)">
@@ -268,7 +370,7 @@ async function save() {
 
     <div class="row" style="margin-top: 8px">
       <div class="col">
-        <h6>Per portion</h6>
+        <h4>Per-portion macros</h4>
         <p v-if="computing">
           <n-spin :size="14" />
         </p>

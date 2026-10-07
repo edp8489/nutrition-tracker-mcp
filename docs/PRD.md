@@ -114,7 +114,7 @@ TypeScript on **Bun** (no Node); `@modelcontextprotocol/sdk`; **streamable HTTP*
 ### 6.2 Recipes
 - Create recipe: name + list of ingredients `{ foodId, quantity, unit }` + portion count.
 - Quantity input accepts g, ml, oz, lb, fl oz, plus the food's common serving when defined; converted at save (js-quantities / serving anchors, ADR-0024); stored metric-only.
-- No nested recipes (no recipe-as-ingredient).
+- Embed saved recipes as ingredients: the editor lists saved recipes alongside foods (excluding the recipe being edited); an embedded recipe row carries how many portions of it to use. On save the embed is flattened into the sub-recipe's food ingredients × portion ratio (snapshot, ADR-0031) — later edits to the sub-recipe don't propagate, and cycles are impossible by construction.
 - On save: `perPortionMacros = sum(ingredient macros ÷ 100g × quantity) ÷ portions` — computed by the shared `computeRecipeMacros` tool (MCP endpoint on personal web; in-process on Android); stored on recipe row.
 - Edit recipe → recompute on save. Past log entries unaffected (frozen snapshot).
 - Delete recipe → hard delete from recipe list. Past log entries unaffected.

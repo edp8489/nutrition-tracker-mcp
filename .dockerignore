@@ -1,6 +1,7 @@
-# Keep the build context small: external/ (dataset TSV, 269MB), server/data
-# (SQLite DB, 407MB), node_modules and dist are all excluded — they are
-# gitignored artifacts, rebuilt inside the image or volume-mounted at runtime.
+# Keep the build context small: external/ (dataset TSV, 269MB) and server/data
+# (SQLite DB, 407MB, plus runtime-mounted recipes/ and generated metrics/)
+# are excluded — they are gitignored artifacts, rebuilt inside the image or
+# volume-mounted at runtime.
 
 .git
 .env

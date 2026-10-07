@@ -71,13 +71,8 @@ const results = computed(() => foods.searchResults)
 
 <template>
   <div class="food-search">
-    <n-input v-model:value="query" placeholder="Search foods by name..." clearable>
-      <template #prefix>
-        <n-icon :component="SearchOutline" />
-      </template>
-    </n-input>
-
     <div class="row" style="margin-top: 8px">
+      <b>Filter:</b>
       <n-tag
         v-for="t in typeOptions"
         :key="t.value"
@@ -89,6 +84,18 @@ const results = computed(() => foods.searchResults)
         {{ t.label }}
       </n-tag>
     </div>
+    <n-input
+      v-model:value="query"
+      placeholder="Search foods by name..."
+      clearable
+      style="margin-top: 8px"
+    >
+      <template #prefix>
+        <n-icon :component="SearchOutline" />
+      </template>
+    </n-input>
+
+
 
     <div v-if="foods.searching" class="row" style="margin-top: 8px">
       <n-spin :size="14" />

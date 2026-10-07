@@ -3,7 +3,7 @@
 | Term        | Definition                                                                                          |
 |-------------|-----------------------------------------------------------------------------------------------------|
 | Food        | A single ingredient row from the OpenNutrition dataset. Identified by dataset id.                  |
-| Recipe      | A named list of ingredients (foods + quantity + unit) with a user-defined portion count. No nested recipes in MVP. |
+| Recipe      | A named list of ingredients (foods + quantity + unit) with a user-defined portion count. The editor can embed saved recipes, flattened into food ingredients on save (snapshot, ADR-0031). |
 | Ingredient  | One line of a recipe: `{ foodRef, quantity, unit }`. Metric-normalized at save (ADR-0024).          |
 | Portion     | User-defined count of servings a recipe yields. Recipe nutrition = sum of ingredients ÷ portions.  |
 | Log Entry   | A record of consumption at a loose timestamp (date + hour). References a food or a recipe and stores a frozen macro snapshot. |
@@ -34,7 +34,16 @@
 | Data-Grounded Statement | An answer stating only what dataset fields support, with caveats/disclaimers; the required phrasing style for MCP answers and dietary filtering (ADR-0020). |
 | Bun         | JavaScript runtime used across the project (no Node): web tooling, the MCP server process, and workspaces (ADR-0020). |
 | Export File | JSON document with `nutrition-tracker` envelope (format, version, exportedAt, recipes, logEntries) — the single serialization format for import, LLM attach, server-recipe dirs, and sync payloads (ADR-0027). |
-| Server Recipes | Recipes placed in the host's read-only `./recipes` bind mount, one file per recipe, served to all app instances via the `getServerRecipes` MCP tool. Read-only; imported into personal recipes by copy with a new uuid (ADR-0028). |
+| Server Recipes | Recipes placed in the host's read-only `./data/recipes` bind mount (container: `server/data/recipes`), one file per recipe, served to all app instances via the `getServerRecipes` MCP tool. Read-only; imported into personal recipes by copy with a new uuid (ADR-0028). |
 | Merge        | The single conflict-resolution function in `shared/serialization/`: recipes by-id last-write-wins on `updatedAt`; log entries insert-if-absent (immutable events); invalid items rejected with per-item error report (ADR-0027). |
 | Backup Adapter | Seam for backup destinations: `listBackups()` / `saveBackup()` / `restoreBackup()`. Adapters: local download (v1.1), Dropbox + Google Drive (v1.x), OneDrive deferred. Frontend-only OAuth — no credentials on any server (ADR-0030). |
 | Sync Session | One-shot full-state merge between two devices over WebRTC/PeerJS, payload = export format. Continuous sync permanently rejected (ADR-0029). |
+| Usage Metrics | Opt-in server-side request/performance logging (ADR-0031). Aggregates only — no IPs, payloads, tool arguments, or linkable client identifiers are ever persisted. |
+| Metrics Store | The writable `metrics.sqlite` (default `server/data/metrics/`, `NUTRITION_METRICS_DIR`), separate from the readonly nutrition DB. One row per request; snapshots are GROUP BY queries over the rows. |
+| Request Record | One metrics row: UTC ts, endpoint key, duration, error flag, client-day hash, UA bucket. The unit of retention/pruning. |
+| Endpoint Key | Metrics route taxonomy (ADR-0031): `http:/mcp`, `http:static`, `http:static:404`, `mcp:tool:<name>`. Tool names only, never arguments. |
+| Hourly Snapshot | Per-endpoint request counts for one local hour `[H:00, H:59:30)`, emitted to stdout at H:59:30. Distinct from the per-portion macro Snapshot above. |
+| Daily Snapshot | Detailed daily report (ADR-0031): per-endpoint requests/avgMs/errors, unique clients, UA buckets for local day `[00:00, 23:59:30)`, emitted at 23:59:30. |
+| Client-Day Hash | HMAC-SHA256 of the client IP with an ephemeral per-local-day salt (in-memory only, rotates at local midnight). Used only for COUNT(DISTINCT); not linkable across days or recomputable later. |
+| UA Bucket | Coarse client classification: browser, claude-code, codex, opencode, other (unmatched), unknown (missing). Rules configurable via `NUTRITION_UA_BUCKETS_FILE`; advisory, not identity. |
+| Metrics Log File | Optional plaintext copy of metrics stdout lines, `stdout-YYYY-MM-DD.log` per local day (`NUTRITION_METRICS_LOG_DIR`), appended as lines are emitted. |

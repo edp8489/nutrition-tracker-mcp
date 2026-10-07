@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import {
   AddOutline,
   CloudDownloadOutline,
+  CopyOutline,
   CreateOutline,
   DocumentTextOutline,
   DownloadOutline,
@@ -31,6 +32,12 @@ function newRecipe() {
 
 function editRecipe(id: string) {
   editing.value = { id, open: true }
+}
+
+/** Duplicates the recipe, then opens the editor on the copy. */
+async function duplicateRecipe(r: Recipe) {
+  const id = await recipes.duplicateRecipe(r.id)
+  if (id) editing.value = { id, open: true }
 }
 
 function closeEditor() {
@@ -157,6 +164,11 @@ onMounted(() => {
       <n-button quaternary circle size="small" title="Edit" @click="editRecipe(r.id)">
         <template #icon>
           <n-icon :component="CreateOutline" />
+        </template>
+      </n-button>
+      <n-button quaternary circle size="small" title="Duplicate" @click="duplicateRecipe(r)">
+        <template #icon>
+          <n-icon :component="CopyOutline" />
         </template>
       </n-button>
       <n-button

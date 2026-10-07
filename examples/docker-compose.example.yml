@@ -14,9 +14,9 @@
 #   chmod 644 data/opennutrition.sqlite   # container reads as uid 1000
 #
 # Optional server-level recipes (ADR-0028): drop export files (one recipe per
-# file, e.g. breakfast-smoothie.json) into ./recipes — every app user gets
-# them via the getServerRecipes MCP tool, read-only:
-#   mkdir -p recipes
+# file, e.g. breakfast-smoothie.json) into ./data/recipes — every app user
+# gets them via the getServerRecipes MCP tool, read-only:
+#   mkdir -p data/recipes
 #
 # Then:  docker compose up -d --build
 
@@ -33,11 +33,20 @@ services:
       # Server binds 0.0.0.0; change the host-side port here if 3000 is taken
       NUTRITION_PORT: "3000"
       NUTRITION_DB_PATH: /app/server/data/opennutrition.sqlite
+      # Opt-in usage metrics (ADR-0031): aggregates only, no PII.
+      # NUTRITION_ENABLE_LOGGING: "1"
+      # NUTRITION_METRICS_RETENTION_DAYS: "-1"
+      # NUTRITION_METRICS_LOG_DIR: /app/metrics-logs
+      # Snapshot windows follow the container's local clock; set your zone:
+      # TZ: America/New_York
     volumes:
       # Server opens the DB readonly (server/db.ts), so :ro is safe
       - ./data/opennutrition.sqlite:/app/server/data/opennutrition.sqlite:ro
       # Server-level recipes (ADR-0028): read-only; app users import copies
-      - ./recipes:/app/server/recipes:ro
+      - ./data/recipes:/app/server/data/recipes:ro
+      # Usage metrics store (ADR-0031): writable, opt-in — mount when
+      # NUTRITION_ENABLE_LOGGING is set so counts survive redeploys.
+      # - ./data/metrics:/app/server/data/metrics
     healthcheck:
       test:
         - CMD

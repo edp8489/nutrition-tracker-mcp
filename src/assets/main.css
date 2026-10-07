@@ -98,3 +98,21 @@ main {
   padding-left: 16px;
   margin: 8px 0 0;
 }
+
+:root {
+  --link-color: #0000ee;
+  --link-visited-color: #551a8b;
+}
+
+html.dark {
+  --link-color: #58a6ff;
+  --link-visited-color: #d2a8ff;
+}
+
+a {
+  color: var(--link-color);
+}
+
+a:visited {
+  color: var(--link-visited-color);
+}

@@ -27,5 +27,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // node:sqlite postdates Vite 5's builtin list (metrics store, ADR-0031);
+    // route it to a createRequire shim so vitest (Node) can load it.
+    alias: {
+      'node:sqlite': fileURLToPath(
+        new URL('./server/metrics/node-sqlite.cjs', import.meta.url),
+      ),
+    },
   },
 })
