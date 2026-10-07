@@ -42,6 +42,51 @@ export const NUTRIENT_UNITS: Partial<Record<string, string>> = {
 /** Core macros first, the rest in source order. */
 export const CORE_FIRST = ['calories', 'protein', 'total_fat', 'carbohydrates']
 
+/** Sub-entries rendered indented under their parent macro (v1.1.1). */
+export const NUTRIENT_SUBS: Record<string, string[]> = {
+  total_fat: ['saturated_fats', 'trans_fats', 'polyunsaturated_fats', 'monounsaturated_fats'],
+  carbohydrates: [
+    'total_sugars',
+    'added_sugars',
+    'dietary_fiber',
+    'soluble_fiber',
+    'insoluble_fiber',
+  ],
+}
+
+/** Parent macro of a sub-entry key, if any (inverse of NUTRIENT_SUBS). */
+export const NUTRIENT_PARENT: Record<string, string> = Object.fromEntries(
+  Object.entries(NUTRIENT_SUBS).flatMap(([parent, subs]) => subs.map((sub) => [sub, parent])),
+)
+
+/**
+ * Group rows for display (v1.1.1): core macros first, each followed by its
+ * present sub-entries (NUTRIENT_SUBS order), then the remaining nutrients in
+ * source order. Orphaned sub-entries (parent missing) render with the rest.
+ */
+export function groupNutritionRows(rows: ServedNutrient[]): ServedNutrient[] {
+  const byKey = new Map(rows.map((r) => [r.key, r]))
+  const out: ServedNutrient[] = []
+  const seen = new Set<string>()
+  for (const core of CORE_FIRST) {
+    const row = byKey.get(core)
+    if (!row) continue
+    out.push(row)
+    seen.add(core)
+    for (const sub of NUTRIENT_SUBS[core] ?? []) {
+      const subRow = byKey.get(sub)
+      if (subRow) {
+        out.push(subRow)
+        seen.add(sub)
+      }
+    }
+  }
+  for (const row of rows) {
+    if (!seen.has(row.key)) out.push(row)
+  }
+  return out
+}
+
 /** Ordered, unit-annotated serving of a per-100 g blob (ADR-0023 flags kept). */
 export function servedNutrients(per100g: Nutrition100g): ServedNutrient[] {
   const keys = Object.keys(per100g)

@@ -1,0 +1,161 @@
+{
+  "format": "nutrition-tracker",
+  "version": 1,
+  "exportedAt": "2026-09-29T06:42:40.786Z",
+  "recipes": [
+    {
+      "id": "d0de0a18-aa5c-46ef-84dd-0a3a052614cf",
+      "name": "Jennifer Aniston Salad (EatingBirdFood.com)",
+      "ingredients": [
+        {
+          "foodId": "fd_gHh8zGw91UXg",
+          "foodName": "White Quinoa",
+          "quantity": 172,
+          "unit": "g"
+        },
+        {
+          "foodId": "fd_bivl2jNqqZ7I",
+          "foodName": "English Cucumber",
+          "quantity": 104,
+          "unit": "g"
+        },
+        {
+          "foodId": "fd_FpNdPeyTS1jN",
+          "foodName": "Curly Parsley",
+          "quantity": 30,
+          "unit": "g"
+        },
+        {
+          "foodId": "fd_R3E4VPx21Pqf",
+          "foodName": "Mint",
+          "quantity": 16,
+          "unit": "g"
+        },
+        {
+          "foodId": "fd_e024r4k5FIjx",
+          "foodName": "Red Onions",
+          "quantity": 80,
+          "unit": "g"
+        },
+        {
+          "foodId": "fd_bfMOIlsuD7Vx",
+          "foodName": "Pistachios by Wonderful",
+          "quantity": 60,
+          "unit": "g"
+        },
+        {
+          "foodId": "fd_l6Ky9PfdeuCp",
+          "foodName": "Chickpeas, Canned and Drained",
+          "quantity": 250,
+          "unit": "g"
+        },
+        {
+          "foodId": "fd_7mdWJ00mnsrS",
+          "foodName": "Extra Virgin Olive Oil",
+          "quantity": 56,
+          "unit": "g"
+        },
+        {
+          "foodId": "fd_bTpEH3IbLBCM",
+          "foodName": "Feta Cheese, Crumbled",
+          "quantity": 56,
+          "unit": "g"
+        },
+        {
+          "foodId": "fd_DqJeqd4W61u2",
+          "foodName": "Lemon",
+          "quantity": 130,
+          "unit": "g"
+        }
+      ],
+      "portions": 6,
+      "perPortionMacros": {
+        "calories": 332.8,
+        "protein": 10.44,
+        "carbs": 34.01,
+        "fat": 18.64
+      },
+      "perPortionNutrition": {
+        "calories": 332.8,
+        "protein": 10.44,
+        "total_fat": 18.64,
+        "carbohydrates": 34.01,
+        "iron": 2.82,
+        "zinc": 1.55,
+        "water": 90.84,
+        "biotin": 11.49,
+        "copper": 0.45,
+        "lysine": 0.55,
+        "niacin": 0.67,
+        "serine": 0.43,
+        "sodium": 251.95,
+        "valine": 0.4,
+        "alanine": 0.37,
+        "calcium": 110.39,
+        "choline": 23.19,
+        "cystine": 0.12,
+        "glycine": 0.35,
+        "leucine": 0.59,
+        "omega_3": 0.12,
+        "omega_6": 1.45,
+        "omega_9": 6.71,
+        "proline": 0.44,
+        "thiamin": 0.26,
+        "arginine": 0.67,
+        "chromium": 2.4,
+        "selenium": 3.52,
+        "tyrosine": 0.24,
+        "histidine": 0.24,
+        "magnesium": 88.51,
+        "manganese": 1.34,
+        "potassium": 484.17,
+        "threonine": 0.31,
+        "vitamin_e": 2.74,
+        "folate_dfe": 100.95,
+        "isoleucine": 0.35,
+        "methionine": 0.16,
+        "molybdenum": 6.95,
+        "oleic_acid": 6.69,
+        "phosphorus": 261.74,
+        "riboflavin": 0.19,
+        "trans_fats": 0,
+        "tryptophan": 0.1,
+        "vitamin_b6": 0.36,
+        "added_sugars": 0,
+        "stearic_acid": 0.44,
+        "total_sugars": 5.18,
+        "aspartic_acid": 0.78,
+        "dietary_fiber": 6.86,
+        "ethyl_alcohol": 0,
+        "glutamic_acid": 1.31,
+        "linoleic_acid": 1.45,
+        "palmitic_acid": 1.98,
+        "phenylalanine": 0.39,
+        "soluble_fiber": 1.44,
+        "saturated_fats": 3.56,
+        "insoluble_fiber": 3.42,
+        "pantothenic_acid": 0.48,
+        "other_carbohydrates": 16.81,
+        "alpha_linolenic_acid": 0.12,
+        "monounsaturated_fats": 9.97,
+        "polyunsaturated_fats": 3.85,
+        "vitamin_a": 53.18,
+        "vitamin_c": 17.81,
+        "vitamin_k": 100.59,
+        "iodine": 4.07,
+        "chlorine": 138,
+        "vitamin_a_iu": 33.3,
+        "myristic_acid": 0.22,
+        "eicosenoic_acid": 0.03,
+        "vitamin_d": 0.04,
+        "capric_acid": 0.14,
+        "cholesterol": 7.28,
+        "lauric_acid": 0.08,
+        "vitamin_b12": 0.13,
+        "caprylic_acid": 0.04
+      },
+      "createdAt": "2026-09-29T06:42:34.001Z",
+      "updatedAt": "2026-09-29T06:42:34.001Z"
+    }
+  ]
+}

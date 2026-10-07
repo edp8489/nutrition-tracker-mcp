@@ -37,9 +37,7 @@ Requirements: [Bun](https://bun.sh) and Docker (for server deployment only).
     mv external/opennutrition-dataset-YYYY.MM/opennutrition.sqlite data/
     ```
 
-5. Start the container:
-
-4. **Dev Server (Vite)** Copy or symlink database to `server/data/` and recipes folder to `server/recipes`
+4. **Dev Server (Vite)** Copy or symlink database to `server/data/` and recipes folder to `server/data/recipes/`
 
 5. **Docker Deploy** Adjust the bind mount paths in `docker-compose.yml`:
 
@@ -47,7 +45,7 @@ Requirements: [Bun](https://bun.sh) and Docker (for server deployment only).
     ...
     volumes:
     - "./data/opennutrition.sqlite:app/server/data/opennutrition.sqlite:ro"
-    - "./data/recipes:/app/server/recipes:ro"
+    - "./data/recipes:/app/server/data/recipes:ro"
     ...
     ```
 
@@ -57,6 +55,31 @@ Requirements: [Bun](https://bun.sh) and Docker (for server deployment only).
 Web app: `http://<host>:3000/nutrition-tracker/`
 
 MCP endpoint: `http://<host>:3000/mcp` — point your chat client (Claude Desktop, OpenWebUI, etc.) at this URL
+
+## Metrics & logging
+
+Opt-in server usage/performance metrics (ADR-0031), **off by default**. Enable with `NUTRITION_ENABLE_LOGGING=1` (all variables are documented, commented, in `examples/example.env`):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NUTRITION_ENABLE_LOGGING` | `0` | `1` enables metrics; unset/`0` disables (no request data is touched) |
+| `NUTRITION_METRICS_DIR` | `server/data/metrics` | Directory for the writable `metrics.sqlite` store (volume-mount it) |
+| `NUTRITION_METRICS_LOG_DIR` | unset | When set, also append snapshot lines to `stdout-YYYY-MM-DD.log` (one file per local day) |
+| `NUTRITION_TRUST_PROXY` | `0` | `1` reads the first `X-Forwarded-For` hop (only behind a proxy you control) |
+| `NUTRITION_METRICS_RETENTION_DAYS` | `-1` | `-1`/unset = keep forever; `>= 1` = prune raw rows after N days; `0` is a startup error |
+| `NUTRITION_UA_BUCKETS_FILE` | unset | JSON `[{match, bucket}]` rules replacing the built-in UA buckets |
+| `TZ` | `UTC` | Snapshot windows and log-file rollover follow the container's local clock |
+
+What gets recorded — per request, in a separate SQLite store: UTC timestamp, endpoint (`http:/mcp`, `http:static`, `http:static:404`, `mcp:tool:<name>`), duration, error flag, a per-day anonymous client hash, and a coarse client bucket (`browser`, `claude-code`, `codex`, `opencode`, `other`, `unknown`). **Never recorded**: IPs, request payloads, tool arguments, full User-Agents, or anything linkable to a person. Unique clients are counted via a salted hash whose salt is discarded daily — it cannot be reversed, linked across days, or recomputed later.
+
+Output, single-line JSON on stdout:
+
+```json
+{"type":"usage-hourly","window":"2026-10-03T12:00:00–12:59:30-04:00","timezone":"America/New_York","requests":{"http:/mcp":37,"mcp:tool:searchIngredient":25},"total":159}
+{"type":"usage-daily","window":"2026-10-02T00:00:00–23:59:30-04:00","timezone":"America/New_York","endpoints":{"http:/mcp":{"requests":812,"avgMs":23.4,"errors":3},"mcp:tool:searchIngredient":{"requests":700,"avgMs":41.2,"errors":1}},"uniqueClients":4,"uaBuckets":{"browser":132,"claude-code":668},"total":812}
+```
+
+Hourly snapshots emit at H:59:30 local, the daily snapshot at 23:59:30 — so every line belongs to the local day it describes. Idle hours print nothing; snapshots missed by a restart are backfilled from the store on startup.
 
 ## License
 See LICENSE.md

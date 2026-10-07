@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { darkTheme, type GlobalTheme } from 'naive-ui'
 
 const STORAGE_KEY = 'nt-theme'
@@ -12,6 +12,11 @@ function readStored(): boolean {
 }
 
 const isDark = ref(readStored())
+
+/** Mirrors theme state onto <html> so plain CSS (e.g. link colors) can adapt. */
+watchEffect(() => {
+  document.documentElement.classList.toggle('dark', isDark.value)
+})
 
 function persist() {
   try {

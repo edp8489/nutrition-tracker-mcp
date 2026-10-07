@@ -1,49 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { groupNutritionRows, NUTRIENT_PARENT, NUTRIENT_UNITS } from '@nutrition-tracker/shared/nutrition'
 import type { ServedNutrient } from '@nutrition-tracker/shared/types'
 
 const props = defineProps<{
   rows: ServedNutrient[]
 }>()
 
-/** Core macros first, the rest in source order (mirrors shared/nutrition.ts). */
-const CORE_FIRST = ['calories', 'protein', 'total_fat', 'carbohydrates']
+const ordered = computed<ServedNutrient[]>(() => groupNutritionRows(props.rows))
 
-const ordered = computed<ServedNutrient[]>(() => {
-  const rows = props.rows
-  return [
-    ...rows.filter((r) => CORE_FIRST.includes(r.key)),
-    ...rows.filter((r) => !CORE_FIRST.includes(r.key)),
-  ]
-})
-
-const UNITS: Record<string, string> = {
-  calories: 'kcal',
-  protein: 'g',
-  total_fat: 'g',
-  saturated_fats: 'g',
-  monounsaturated_fats: 'g',
-  polyunsaturated_fats: 'g',
-  trans_fats: 'g',
-  carbohydrates: 'g',
-  dietary_fiber: 'g',
-  soluble_fiber: 'g',
-  insoluble_fiber: 'g',
-  total_sugars: 'g',
-  added_sugars: 'g',
-  sugar_alcohols: 'g',
-  ethyl_alcohol: 'g',
-  water: 'g',
-  sodium: 'mg',
-  potassium: 'mg',
-  calcium: 'mg',
-  iron: 'mg',
-  zinc: 'mg',
-  magnesium: 'mg',
-  phosphorus: 'mg',
-  cholesterol: 'mg',
-  caffeine: 'mg',
+function isSub(key: string): boolean {
+  return key in NUTRIENT_PARENT
 }
+
+const UNITS = NUTRIENT_UNITS
 
 const LABELS: Record<string, string> = {
   calories: 'Calories',
@@ -101,7 +71,7 @@ function amount(row: ServedNutrient): string {
       </tr>
     </thead>
     <tbody>
-      <tr v-for="row in ordered" :key="row.key">
+      <tr v-for="row in ordered" :key="row.key" :class="{ 'sub-row': isSub(row.key) }">
         <td>{{ label(row.key) }}</td>
         <td>
           <span v-if="row.measured">{{ amount(row) }}</span>
@@ -111,3 +81,10 @@ function amount(row: ServedNutrient): string {
     </tbody>
   </n-table>
 </template>
+
+<style scoped>
+.sub-row td:first-child {
+  padding-left: 24px;
+  color: #888;
+}
+</style>

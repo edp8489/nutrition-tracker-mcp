@@ -8,7 +8,7 @@ Use case 3 of v1.1: recipes saved at the server level should propagate to every 
 
 ## Decision
 
-- **Docker bind mount**: `docker-compose.yml` gains `./recipes:/app/server/recipes:ro`. Users drop exported recipe files into this directory on the host.
+- **Docker bind mount**: `docker-compose.yml` gains `./recipes:/app/server/recipes:ro`. Users drop exported recipe files into this directory on the host. (Amended 2026-10-03: the mount is now `./data/recipes:/app/server/data/recipes:ro` — all server data lives under `server/data/` alongside the nutrition DB and metrics store.)
 - **One file per recipe** (e.g. `breakfast-smoothie.json`, `lunch-sandwich.json`) for easy maintenance; files use the ADR-0027 export envelope (`recipes` array length 1..N, so multi-recipe files also work).
 - **New MCP tool `getServerRecipes`** (impl in `shared/tools/`, schema in `shared/schemas.ts`, registered in `buildServer()`): reads the directory fresh on every call — no cache, no watcher. Small recipe counts make per-call reads cheap, and fresh reads reflect newly dropped files without restart.
 - Validation: glob `*.json`, validate each file against the recipe schema, merge all valid recipes into one array. Invalid files are skipped and logged — one bad file never fails the whole directory.

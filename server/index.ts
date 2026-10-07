@@ -11,8 +11,9 @@
  *
  * Env (see .env.example; Bun auto-loads .env):
  *   NUTRITION_DB_PATH  path to opennutrition.sqlite (default server/data/)
- *   NUTRITION_RECIPES_PATH  server-recipes dir (default server/recipes, ADR-0028)
+ *   NUTRITION_RECIPES_PATH  server-recipes dir (default server/data/recipes, ADR-0028)
  *   NUTRITION_PORT    HTTP port (default 3000)
+ *   NUTRITION_ENABLE_LOGGING  opt-in usage metrics (ADR-0031; see metrics/)
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -36,12 +37,13 @@ import {
 import { existsSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
 import { BunSqliteRepository } from './db'
+import { initMetrics, type Metrics, type RequestIdentity } from './metrics'
 
 const DB_PATH = resolve(
   process.env.NUTRITION_DB_PATH ?? 'server/data/opennutrition.sqlite',
 )
 /** Server-recipes dir (ADR-0028): read-only bind mount, fresh read per call. */
-const RECIPES_PATH = resolve(process.env.NUTRITION_RECIPES_PATH ?? 'server/recipes')
+const RECIPES_PATH = resolve(process.env.NUTRITION_RECIPES_PATH ?? 'server/data/recipes')
 const PORT = Number(process.env.NUTRITION_PORT ?? 3000)
 
 const DIST = resolve('dist')
@@ -90,18 +92,42 @@ async function serveStatic(pathname: string): Promise<Response> {
   return new Response('Not found', { status: 404 })
 }
 
-/** Wrap a shared tool: result → JSON text; throw → isError result. */
+/**
+ * Wrap a shared tool: result → JSON text; throw → isError result.
+ * With metrics on (ADR-0031), records `mcp:tool:<name>` duration + error —
+ * tool names only, never arguments.
+ */
 function toolHandler<TParams>(
+  toolName: string,
   fn: (params: TParams, repo: FoodRepository) => unknown,
   repo: FoodRepository,
+  metrics: Metrics | null,
+  identity: RequestIdentity | null,
 ) {
   return async (args: TParams) => {
+    const started = metrics !== null && identity !== null ? performance.now() : 0
     try {
       const result = fn(args, repo)
+      if (metrics !== null && identity !== null) {
+        metrics.record(
+          `mcp:tool:${toolName}`,
+          performance.now() - started,
+          false,
+          identity,
+        )
+      }
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
       }
     } catch (err) {
+      if (metrics !== null && identity !== null) {
+        metrics.record(
+          `mcp:tool:${toolName}`,
+          performance.now() - started,
+          true,
+          identity,
+        )
+      }
       return {
         content: [
           {
@@ -115,7 +141,11 @@ function toolHandler<TParams>(
   }
 }
 
-function buildServer(repo: FoodRepository): McpServer {
+function buildServer(
+  repo: FoodRepository,
+  metrics: Metrics | null,
+  identity: RequestIdentity | null,
+): McpServer {
   const server = new McpServer({ name: 'nutrition-tracker', version: '0.1.0' })
 
   server.registerTool(
@@ -128,7 +158,7 @@ function buildServer(repo: FoodRepository): McpServer {
         'macros.',
       inputSchema: searchIngredientSchema,
     },
-    toolHandler(searchIngredient, repo),
+    toolHandler('searchIngredient', searchIngredient, repo, metrics, identity),
   )
 
   server.registerTool(
@@ -141,7 +171,7 @@ function buildServer(repo: FoodRepository): McpServer {
         'metric serving. Use after searchIngredient.',
       inputSchema: getIngredientMacrosSchema,
     },
-    toolHandler(getIngredientMacros, repo),
+    toolHandler('getIngredientMacros', getIngredientMacros, repo, metrics, identity),
   )
 
   server.registerTool(
@@ -156,7 +186,7 @@ function buildServer(repo: FoodRepository): McpServer {
         'zeros are never summed).',
       inputSchema: computeRecipeMacrosSchema,
     },
-    toolHandler(computeRecipeMacros, repo),
+    toolHandler('computeRecipeMacros', computeRecipeMacros, repo, metrics, identity),
   )
 
   server.registerTool(
@@ -168,7 +198,7 @@ function buildServer(repo: FoodRepository): McpServer {
         'The model never invents criteria — thresholds come from the server.',
       inputSchema: filterFoodsSchema,
     },
-    toolHandler(filterFoods, repo),
+    toolHandler('filterFoods', filterFoods, repo, metrics, identity),
   )
 
   server.registerTool(
@@ -180,7 +210,27 @@ function buildServer(repo: FoodRepository): McpServer {
         '(cup, slice, egg, …) require a foodId and use its dataset serving anchor.',
       inputSchema: convertUnitsSchema,
     },
-    toolHandler(convertUnits, repo),
+    toolHandler('convertUnits', convertUnits, repo, metrics, identity),
+  )
+
+  server.registerTool(
+    'getServerRecipes',
+    {
+      description:
+        'All server-level recipes (ADR-0028): every *.json export file in the ' +
+        "server's recipes bind mount, validated against the export envelope " +
+        '(ADR-0027) and merged into one array. Read fresh per call — newly ' +
+        'dropped files appear without a server restart. Invalid files are ' +
+        'skipped and reported in caveats. Takes no arguments.',
+      inputSchema: getServerRecipesSchema,
+    },
+    toolHandler(
+      'getServerRecipes',
+      () => getServerRecipes(RECIPES_PATH),
+      repo,
+      metrics,
+      identity,
+    ),
   )
 
   server.registerTool(
@@ -209,17 +259,26 @@ async function main(): Promise<void> {
   const repo = new BunSqliteRepository(DB_PATH)
 
   if (process.argv.includes('--stdio')) {
-    const server = buildServer(repo)
+    const server = buildServer(repo, null, null)
     await server.connect(new StdioServerTransport())
     console.error('nutrition-tracker MCP: stdio transport ready')
     return
   }
 
+  // Opt-in usage metrics (ADR-0031): null when NUTRITION_ENABLE_LOGGING is
+  // unset/0; invalid logging config is fatal, environment failures fail soft.
+  const metrics = initMetrics(process.env)
+
   // Stateless streamable HTTP (ADR-0020): the SDK requires a fresh server +
   // transport per request in stateless mode ("stateless transport cannot be
-  // reused across requests"). The readonly SQLite repo is shared.
-  const handleMcp = async (req: Request): Promise<Response> => {
-    const server = buildServer(repo)
+  // reused across requests"). The readonly SQLite repo is shared. The
+  // per-request identity (client-day hash + UA bucket, ADR-0031) is computed
+  // once in the fetch wrapper and shared by the HTTP row and its tool rows.
+  const handleMcp = async (
+    req: Request,
+    identity: RequestIdentity | null,
+  ): Promise<Response> => {
+    const server = buildServer(repo, metrics, identity)
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
     })
@@ -229,13 +288,43 @@ async function main(): Promise<void> {
 
   Bun.serve({
     port: PORT,
-    fetch: (req) => {
+    fetch: (req, bunServer) => {
       const { pathname } = new URL(req.url)
-      if (pathname === '/mcp' || pathname === '/mcp/') return handleMcp(req)
-      return serveStatic(pathname)
+      const isMcp = pathname === '/mcp' || pathname === '/mcp/'
+      if (metrics === null) {
+        return isMcp ? handleMcp(req, null) : serveStatic(pathname)
+      }
+      const started = performance.now()
+      const identity = metrics.identify(
+        req,
+        (r) => bunServer.requestIP(r)?.address ?? null,
+      )
+      const finish = (res: Response): Response => {
+        const endpoint = isMcp
+          ? 'http:/mcp'
+          : res.status === 404
+            ? 'http:static:404'
+            : 'http:static'
+        const isError = isMcp ? res.status >= 400 : res.status >= 500
+        metrics.record(endpoint, performance.now() - started, isError, identity)
+        return res
+      }
+      const fail = (err: unknown): never => {
+        metrics.record(
+          isMcp ? 'http:/mcp' : 'http:static',
+          performance.now() - started,
+          true,
+          identity,
+        )
+        throw err
+      }
+      const handled = isMcp ? handleMcp(req, identity) : serveStatic(pathname)
+      return handled.then(finish, fail)
     },
   })
 
+  metrics?.start()
+  if (metrics !== null) console.log(metrics.summary)
   console.log(`nutrition-tracker MCP: streamable HTTP on http://localhost:${PORT}/mcp`)
   console.log(
     existsSync(join(DIST, 'index.html'))

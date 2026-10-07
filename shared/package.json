@@ -6,6 +6,7 @@
   "exports": {
     ".": "./index.ts",
     "./types": "./types.ts",
+    "./nutrition": "./nutrition.ts",
     "./serialization": "./serialization/index.ts"
   },
   "dependencies": {
