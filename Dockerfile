@@ -41,10 +41,27 @@ COPY server/ server/
 # Built web app from stage 1
 COPY --from=build /app/dist/ dist/
 
-# Run as the non-root `bun` user (uid 1000) baked into the oven/bun image.
-# The volume-mounted DB must be readable by uid 1000 (chmod 644 is enough —
-# the server opens it readonly).
-USER bun
+# Entrypoint fixes ownership of writable bind mounts, then drops to bun
+COPY --chmod=755 docker/entrypoint.sh /app/entrypoint.sh
+
+# Optionally remap the bun user (uid/gid 1000 in oven/bun) to the host user's
+# uid/gid so bind-mount ownership lines up (pass HOST_UID/HOST_GID via compose
+# build args). Skipped when unset or already 1000 — the entrypoint's root-side
+# chown covers ownership either way; remapping just keeps host-side files
+# owned by the host user. Fails the build if the uid collides.
+ARG UID=
+ARG GID=
+RUN if [ -n "$UID" ] && [ "$UID" != "$(id -u bun)" ]; then \
+      [ -z "$GID" ] && GID="$UID"; \
+      usermod --uid "$UID" --gid "$GID" bun; \
+    fi \
+ && command -v setpriv >/dev/null
+
+# Start as root so the entrypoint can chown bind mounts, then drop to bun
+# via setpriv. The volume-mounted DB must be readable by the bun user
+# (chmod 644 is enough — the server opens it readonly).
+USER root
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 EXPOSE 3000
 

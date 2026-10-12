@@ -3,7 +3,7 @@
   "description":"Nutrition tracker and MCP server base don OpenNutrition dataset.",
   "license": "See LICENSE.md",
   "author": "Eric Peters <contact@epeters.io> (https://www.epeters.io)",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "type": "module",
   "workspaces": [

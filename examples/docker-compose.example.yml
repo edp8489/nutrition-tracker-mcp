@@ -18,11 +18,24 @@
 # gets them via the getServerRecipes MCP tool, read-only:
 #   mkdir -p data/recipes
 #
+# Optional usage metrics (ADR-0031): enable the env vars + volumes below.
+# No host prep needed — the entrypoint runs as root, chowns ./data/metrics
+# to the container's bun user, then drops privileges. On Linux, to keep the
+# files owned by YOUR host user instead, match the container uid to yours:
+#   HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose up -d --build
+#
 # Then:  docker compose up -d --build
 
 services:
   nutrition-tracker-mcp:
-    build: .
+    build:
+      context: .
+      args:
+        # Remap the container's bun user (default 1000:1000) to your host
+        # uid/gid so bind-mounted files stay owned by you (Linux hosts whose
+        # user is not uid 1000). Leave unset on macOS Docker Desktop.
+        UID: "${HOST_UID:-1000}"
+        GID: "${HOST_GID:-1000}"
     # Or use a prebuilt image instead of building on the server:
     # image: ghcr.io/<you>/nutrition-tracker:latest
     container_name: nutrition-tracker-mcp
@@ -36,7 +49,9 @@ services:
       # Opt-in usage metrics (ADR-0031): aggregates only, no PII.
       # NUTRITION_ENABLE_LOGGING: "1"
       # NUTRITION_METRICS_RETENTION_DAYS: "-1"
-      # NUTRITION_METRICS_LOG_DIR: /app/metrics-logs
+      # Optional snapshot log dir — must live under a writable mount (the
+      # image's /app is root-owned), so keep it inside the metrics volume:
+      # NUTRITION_METRICS_LOG_DIR: /app/server/data/metrics/logs
       # Snapshot windows follow the container's local clock; set your zone:
       # TZ: America/New_York
     volumes:
@@ -44,8 +59,11 @@ services:
       - ./data/opennutrition.sqlite:/app/server/data/opennutrition.sqlite:ro
       # Server-level recipes (ADR-0028): read-only; app users import copies
       - ./data/recipes:/app/server/data/recipes:ro
-      # Usage metrics store (ADR-0031): writable, opt-in — mount when
-      # NUTRITION_ENABLE_LOGGING is set so counts survive redeploys.
+      # Usage metrics store (ADR-0031): writable (sqlite WAL creates -wal/-shm
+      # files alongside the db), opt-in — mount when NUTRITION_ENABLE_LOGGING
+      # is set so counts survive redeploys. Must NOT be :ro. Pre-creating
+      # ./data/metrics is optional: if docker creates it as root:root, or it
+      # is owned by a uid != 1000, the entrypoint chowns it at startup.
       # - ./data/metrics:/app/server/data/metrics
     healthcheck:
       test:

@@ -51,6 +51,7 @@ Requirements: [Bun](https://bun.sh) and Docker (for server deployment only).
 
 
 6. **Docker** Start the container: `docker compose up -d --build`
+   On Linux, if your user is not uid 1000 and you bind-mount the metrics store, match the container's `bun` user to your uid so mounted files stay owned by you: `HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose up -d --build`
 
 Web app: `http://<host>:3000/nutrition-tracker/`
 
